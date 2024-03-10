@@ -1,8 +1,8 @@
 #include <bits/stdc++.h>
 
-#include "move.hpp"
-#include "graph.hpp"
-#include "logger.hpp"
+#include "./src/move.hpp"
+#include "./src/graph.hpp"
+#include "./src/logger.hpp"
 
 Logger logger("./replay/debug.log");
 
