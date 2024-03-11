@@ -1,6 +1,6 @@
 #include "move.hpp"
 #include "graph.hpp"
-#include "test/AstarByBert.cpp"
+#include "AstarByBert.cpp"
 
 void Init() {
     for (int i = 0; i < n; i++) { // 从 ch[0][0] -> ch[n-1][n-1]
