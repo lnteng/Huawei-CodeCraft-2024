@@ -1,3 +1,6 @@
+#include <ctime>
+#include <iterator>
+#include <cstdlib>
 #include "move.hpp"
 #include "graph.hpp"
 
@@ -39,164 +42,85 @@ int Input() {
     return id;
 }
 
+bool isVaild(int x, int y, Direct dir) {
+    if (x + dx[dir] < 0 || x + dx[dir] >= n || 
+        y + dy[dir] < 0 || y + dy[dir] >= n) {
+        return false;
+    }
+    return true;
+}
+
+void printMoreDebugINfo() {
+    for (int i = 0; i < berth_num; i++) { // debug
+        for (int x = 0; x < N; x++) {
+            std::ostringstream oss;
+            oss << "[";
+            for (int y = 0; y < N; y++) {
+                oss << dists[i][x][y] << "\t";
+            }
+            oss << "]";
+            logger.log(INFO, oss.str());
+        }
+    }
+}
+
 void Output(int zhenId) {
     // 处理船舶
     for (int i = 0; i < 5; i++) {
-        if (boats[i].pos == -1) {
+        if (boats[i].pos == -1 && boats[i].status == 1) {
+            logger.log(INFO, "boatShip " + to_string(i) + " to " + to_string(i));
             boatShip(i, i);
         }
-        if (boats[i].num > 0 && boats[i].zId == zhenId && boats[i].status == 1) { 
-            logger.log(INFO, "boatGo " + to_string(i) + to_string(boats[i].num));
+        // if (boats[i].num > 0 && boats[i].status == 1) { 
+        if (zhenId == 14000) { 
+            logger.log(INFO, "boatGo " + to_string(i) + " with value "+ to_string(boats[i].num));
             boatGo(i);
         }
-
-        // if (zhenId == 500) {
-        //     logger.log(INFO, "boatShip");
-        //     boatShip(i, i);
-        // }
-        // if (zhenId == 1000) {
-        //     logger.log(INFO, "boatGo");
-        //     boatGo(i);
-        // }
     }
 
-    // // 处理机器人
-    // for(int i = 0; i < robot_num; i++) {
-    //     if (robots[i].status == 0) { // 恢复状态
-    //         continue;
-    //     }
-    //     if (robots[i].goods == 0) { // 未携带货物
-
-    //     } else { // 携带有货物
-
-    //     }
-    // }
-
     int i = 0;
-    Robot robot = robots[i]; // demo: 仅操作一个机器人
-    Berth berth = berths[0]; // 前往第一个 berth
-    Point good = gds.begin()->first; // 取出第一个 good
+    Robot& robot = robots[i]; // demo: 仅操作一个机器人
+    Point pRobut = make_pair(robot.x, robot.y);
+    Berth& berth = berths[0]; // 前往第一个 berth
     if (robot.goods == 0) { // 未携带货物
-        int beforeDist = calcManhattanDist(robot.x, robot.y, good.first, good.second);
-        int afterDist[4];
-
-        paths[i].insert(make_pair(robot.x, robot.y));
-        if (robot.y + 1 < n && ch[robot.x][robot.y + 1] == '.' && paths[i].count(make_pair(robot.x, robot.y + 1)) == 0) { // right
-            afterDist[0] = calcManhattanDist(robot.x, robot.y + 1, good.first, good.second);
+        if (!robot.hasPath()) {
+            robotGet(i);
+            logger.log(INFO, "get");
+            logger.log(INFO, "robot current pos: " + to_string(pRobut.first) + ", " + to_string(pRobut.second));
+            std::vector<Direct> paths;
+            Point pGood;
+            do {
+                std::srand(std::time(0));
+                int randomIndex = std::rand() % gds.size();
+                auto it = gds.begin();
+                std::advance(it, randomIndex);
+                Point pGood = it->first; // 取出第一个 good
+                gds.erase(it);
+                paths = AStar(pRobut, pGood);
+            } while (paths.empty());
+            logger.log(INFO, to_string(pRobut.first) + ", " + to_string(pRobut.second));
+            logger.log(INFO, to_string(pGood.first) + ", " + to_string(pGood.second));
+            robot.newPath(paths);
+            logger.log(INFO, "calc new path, lenght: " + to_string(robot.path.size()));
         } else {
-            afterDist[0] = INT16_MAX;
-        }
-        if (robot.y > 0 && ch[robot.x][robot.y - 1] == '.' && paths[i].count(make_pair(robot.x, robot.y - 1)) == 0) { // left
-            afterDist[1] = calcManhattanDist(robot.x, robot.y - 1, good.first, good.second);
-        } else {
-            afterDist[1] = INT16_MAX;
-        }
-        if (robot.x > 0 && ch[robot.x - 1][robot.y] == '.' && paths[i].count(make_pair(robot.x - 1, robot.y)) == 0) { // upper
-            afterDist[2] = calcManhattanDist(robot.x - 1, robot.y, good.first, good.second);
-        } else {
-            afterDist[2] = INT16_MAX;
-        }
-        if (robot.x + 1 < n && ch[robot.x + 1][robot.y] == '.' && paths[i].count(make_pair(robot.x + 1, robot.y)) == 0) { // down
-            afterDist[3] = calcManhattanDist(robot.x + 1, robot.y, good.first, good.second);
-        } else {
-            afterDist[3] = INT16_MAX;
-        }
-
-        int minIdx = 0;
-        for (int idx = 0; idx < 4; idx++) {
-            if (afterDist[idx] < afterDist[minIdx]) {
-                minIdx = idx;
-            }
-        }
-
-        switch (minIdx) {
-        case 0:
-            robotRight(i);
-            logger.log(INFO, "robotRight");
-
-            if (afterDist[minIdx] == 0) {
-                robotGet(i);
-                logger.log(INFO, "get");
-            }
-            break;
-        case 1:
-            robotLeft(i);
-            logger.log(INFO, "robotLeft");
-
-            if (afterDist[minIdx] == 0) {
-                robotGet(i);
-                logger.log(INFO, "get");
-            }
-            break;
-        case 2:
-            robotUpper(i);
-            logger.log(INFO, "robotUpper");
-            if (afterDist[minIdx] == 0) {
-                robotGet(i);
-                logger.log(INFO, "get");
-            }
-            break;
-        case 3:
-            robotDown(i);
-            logger.log(INFO, "robotDown");
-            if (afterDist[minIdx] == 0) {
-                robotGet(i);
-                logger.log(INFO, "get");
-            }
-            break;
-        default:
-            break;
+            logger.log(INFO, "move along path, idx: " +  to_string(robot.pid));
+            // 根据计算出来的最短路径移动 robot
+            robotMove(i, robot.path[robot.pid]);
+            robot.incrementPid();
         }
     } else { // 携带有货物
-        if (robot.y + 1 < n && dists[0][robot.x][robot.y + 1] < dists[0][robot.x][robot.y]) { // right
-            robotRight(i);
-            logger.log(INFO, "robotRight " + to_string(dists[0][robot.x][robot.y]));
-            if (dists[0][robot.x][robot.y] == 1) {
-                robotPull(i);
-                boats[0].num += gds.begin()->second;
-                boats[0].zId = zhenId + 50;
-                logger.log(INFO, "pull");
-                // logger.log(INFO, "boatGo " + to_string(boats[0].num));
-                // boatGo(0);
-            }
-        }
-        if (robot.y > 0 && dists[0][robot.x][robot.y - 1] < dists[0][robot.x][robot.y]) { // left
-            robotLeft(i);
-            logger.log(INFO, "robotLeft " + to_string(dists[0][robot.x][robot.y]));
-            if (dists[0][robot.x][robot.y] == 1) {
-                robotPull(i);
-                robotPull(i);
-                boats[0].num += gds.begin()->second;
-                boats[0].zId = zhenId + 50;
-                logger.log(INFO, "pull");
-                // logger.log(INFO, "boatGo " + to_string(boats[0].num));
-                // boatGo(0);
-            }
-        }
-        if (robot.x > 0 && dists[0][robot.x - 1][robot.y] < dists[0][robot.x][robot.y]) { // upper
-            robotUpper(i);
-            logger.log(INFO, "robotUpper " + to_string(dists[0][robot.x][robot.y]));
-            if (dists[0][robot.x][robot.y] == 1) {
-                robotPull(i);
-                robotPull(i);
-                boats[0].num += gds.begin()->second;
-                boats[0].zId = zhenId + 50;
-                logger.log(INFO, "pull");
-                // logger.log(INFO, "boatGo " + to_string(boats[0].num));
-                // boatGo(0);
-            }
-        }
-        if (robot.x + 1 < n && dists[0][robot.x + 1][robot.y] < dists[0][robot.x][robot.y]) { // down
-            robotDown(i);
-            logger.log(INFO, "robotDown " + to_string(dists[0][robot.x][robot.y]));
-            if (dists[0][robot.x][robot.y] == 1) {
-                robotPull(i);
-                robotPull(i);
-                boats[0].num += gds.begin()->second;
-                boats[0].zId = zhenId + 50;
-                logger.log(INFO, "pull");
-                // logger.log(INFO, "boatGo " + to_string(boats[0].num));
-                // boatGo(0);
+        for (int dir = 0; dir < 4; dir++) {
+            if (isVaild(robot.x, robot.y, (Direct)dir) && dists[0][robot.x + dx[dir]][robot.y + dy[dir]] < dists[0][robot.x][robot.y]) { // TODO: bugfix
+                robotMove(i, (Direct)dir);
+                logger.log(INFO, to_string((Direct)dir) + " " + to_string(dists[0][robot.x][robot.y]));
+                if (dists[0][robot.x][robot.y] == 1) {
+                    robotPull(i);
+                    // boats[0].num += gds.begin()->second;
+                    // boats[0].zId = zhenId + 50;
+                    logger.log(INFO, "pull");
+                    // logger.log(INFO, "boatGo " + to_string(boats[0].num));
+                    // boatGo(0);
+                }
             }
         }
     }
@@ -204,26 +128,12 @@ void Output(int zhenId) {
 
 int main() {
     Init();
+    printMoreDebugINfo();
     for(int zhen = 1; zhen <= 15000; zhen ++) {
         int zhenId = Input();
         Output(zhenId);
         Ok();
         fflush(stdout);
     }
-
-    // for (int i = 0; i < berth_num; i++) { // debug
-    //     for (int x = 0; x < N; x++) {
-    //         std::ostringstream oss;
-    //         oss << "[";
-    //         for (int y = 0; y < N; y++) {
-    //             oss << dists[i][x][y] << "\t";
-    //         }
-    //         oss << "]";
-    //         logger.log(INFO, oss.str());
-    //     }
-    //     printf("\n\n");
-    // }
-
     return 0;
 }
-
