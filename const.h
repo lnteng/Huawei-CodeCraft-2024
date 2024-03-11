@@ -12,7 +12,7 @@ const int N = 210;
 struct Robot {
     int x, y, goods;
     int status;
-    int mbx, mby;
+    int mbx, mby; // 目标坐标
     Robot() {}
     Robot(int startX, int startY) {
         x = startX;

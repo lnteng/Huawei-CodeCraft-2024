@@ -1,5 +1,6 @@
 #include "move.hpp"
 #include "graph.hpp"
+#include "test/AstarByBert.cpp"
 
 void Init() {
     for (int i = 0; i < n; i++) { // 从 ch[0][0] -> ch[n-1][n-1]
@@ -40,164 +41,118 @@ int Input() {
 }
 
 void Output(int zhenId) {
+    // int i = 0;
+    for(int i = 0; i < 1; i++){
+            Robot robot = robots[i]; // demo: 仅操作一个机器人
+        Berth berth = berths[0]; // 前往第一个 berth
+        Point good = gds.begin()->first; // 取出第一个 good
+        int value = gds.begin()->second; // 取出第一个 good 的 value
+
+        // gds.erase(good); // 删除第一个 good
+        // 现在我希望机器人i去取goods第%robot_num%个货物
+
+        if (robot.goods == 0) { // 未携带货物
+            vector<int> path = AStar(robot.x, robot.y, good.first, good.second);
+            //如果path没有元素，则
+            if (path.size() == 0) {
+                robotGet(i);
+                logger.log(INFO, "get");
+            }else{
+                switch (path[0]) {
+                    case 0:
+                        robotRight(i);
+                        logger.log(INFO, "robotRight");
+                        break;
+                    case 1:
+                        robotLeft(i);
+                        logger.log(INFO, "robotLeft");
+                        break;
+                    case 2:
+                        robotUpper(i);
+                        logger.log(INFO, "robotUpper");
+                        break;
+                    case 3:
+                        robotDown(i);
+                        logger.log(INFO, "robotDown");
+                        break;
+                    default:
+                        break;
+                }
+            }
+        } else { // 携带有货物
+            if (robot.y + 1 < n && dists[0][robot.x][robot.y + 1] < dists[0][robot.x][robot.y]) { // right
+                robotRight(i);
+                logger.log(INFO, "robotRight " + to_string(dists[0][robot.x][robot.y]));
+                if (dists[0][robot.x][robot.y] == 1) {
+                    robotPull(i);
+                    boats[0].num += value;
+                    boats[0].zId = zhenId + 500;
+                    logger.log(INFO, "pull");
+                    // logger.log(INFO, "boatGo " + to_string(boats[0].num));
+                    // boatGo(0);
+                }
+            }
+            if (robot.y > 0 && dists[0][robot.x][robot.y - 1] < dists[0][robot.x][robot.y]) { // left
+                robotLeft(i);
+                logger.log(INFO, "robotLeft " + to_string(dists[0][robot.x][robot.y]));
+                if (dists[0][robot.x][robot.y] == 1) {
+                    robotPull(i);
+                    robotPull(i);
+                    boats[0].num += value;
+                    boats[0].zId = zhenId + 500;
+                    logger.log(INFO, "pull");
+                    // logger.log(INFO, "boatGo " + to_string(boats[0].num));
+                    // boatGo(0);
+                }
+            }
+            if (robot.x > 0 && dists[0][robot.x - 1][robot.y] < dists[0][robot.x][robot.y]) { // upper
+                robotUpper(i);
+                logger.log(INFO, "robotUpper " + to_string(dists[0][robot.x][robot.y]));
+                if (dists[0][robot.x][robot.y] == 1) {
+                    robotPull(i);
+                    robotPull(i);
+                    boats[0].num += value;
+                    boats[0].zId = zhenId + 500;
+                    logger.log(INFO, "pull");
+                    // logger.log(INFO, "boatGo " + to_string(boats[0].num));
+                    // boatGo(0);
+                }
+            }
+            if (robot.x + 1 < n && dists[0][robot.x + 1][robot.y] < dists[0][robot.x][robot.y]) { // down
+                robotDown(i);
+                logger.log(INFO, "robotDown " + to_string(dists[0][robot.x][robot.y]));
+                if (dists[0][robot.x][robot.y] == 1) {
+                    robotPull(i);
+                    robotPull(i);
+                    boats[0].num += value;
+                    boats[0].zId = zhenId + 500;
+                    logger.log(INFO, "pull");
+                    // logger.log(INFO, "boatGo " + to_string(boats[0].num));
+                    // boatGo(0);
+                }
+            }
+        }
+
+    }
+
     // 处理船舶
     for (int i = 0; i < 5; i++) {
-        if (boats[i].pos == -1) {
+        if (boats[i].pos == -1 and boats[i].status == 1) {
+            logger.log(INFO, "frist boatShip"); 
             boatShip(i, i);
         }
+        // if (zhenId == 1 or zhenId == 2 or zhenId == 3) {
+        //     logger.log(INFO, to_string(zhenId)+" boat status " + to_string(boats[i].status));
+        // }
+
         if (boats[i].num > 0 && boats[i].zId == zhenId && boats[i].status == 1) { 
             logger.log(INFO, "boatGo " + to_string(i) + to_string(boats[i].num));
             boatGo(i);
         }
 
-        // if (zhenId == 500) {
-        //     logger.log(INFO, "boatShip");
-        //     boatShip(i, i);
-        // }
-        // if (zhenId == 1000) {
-        //     logger.log(INFO, "boatGo");
-        //     boatGo(i);
-        // }
-    }
-
-    // // 处理机器人
-    // for(int i = 0; i < robot_num; i++) {
-    //     if (robots[i].status == 0) { // 恢复状态
-    //         continue;
-    //     }
-    //     if (robots[i].goods == 0) { // 未携带货物
-
-    //     } else { // 携带有货物
-
-    //     }
-    // }
-
-    int i = 0;
-    Robot robot = robots[i]; // demo: 仅操作一个机器人
-    Berth berth = berths[0]; // 前往第一个 berth
-    Point good = gds.begin()->first; // 取出第一个 good
-    if (robot.goods == 0) { // 未携带货物
-        int beforeDist = calcManhattanDist(robot.x, robot.y, good.first, good.second);
-        int afterDist[4];
-
-        paths[i].insert(make_pair(robot.x, robot.y));
-        if (robot.y + 1 < n && ch[robot.x][robot.y + 1] == '.' && paths[i].count(make_pair(robot.x, robot.y + 1)) == 0) { // right
-            afterDist[0] = calcManhattanDist(robot.x, robot.y + 1, good.first, good.second);
-        } else {
-            afterDist[0] = INT16_MAX;
-        }
-        if (robot.y > 0 && ch[robot.x][robot.y - 1] == '.' && paths[i].count(make_pair(robot.x, robot.y - 1)) == 0) { // left
-            afterDist[1] = calcManhattanDist(robot.x, robot.y - 1, good.first, good.second);
-        } else {
-            afterDist[1] = INT16_MAX;
-        }
-        if (robot.x > 0 && ch[robot.x - 1][robot.y] == '.' && paths[i].count(make_pair(robot.x - 1, robot.y)) == 0) { // upper
-            afterDist[2] = calcManhattanDist(robot.x - 1, robot.y, good.first, good.second);
-        } else {
-            afterDist[2] = INT16_MAX;
-        }
-        if (robot.x + 1 < n && ch[robot.x + 1][robot.y] == '.' && paths[i].count(make_pair(robot.x + 1, robot.y)) == 0) { // down
-            afterDist[3] = calcManhattanDist(robot.x + 1, robot.y, good.first, good.second);
-        } else {
-            afterDist[3] = INT16_MAX;
-        }
-
-        int minIdx = 0;
-        for (int idx = 0; idx < 4; idx++) {
-            if (afterDist[idx] < afterDist[minIdx]) {
-                minIdx = idx;
-            }
-        }
-
-        switch (minIdx) {
-        case 0:
-            robotRight(i);
-            logger.log(INFO, "robotRight");
-
-            if (afterDist[minIdx] == 0) {
-                robotGet(i);
-                logger.log(INFO, "get");
-            }
-            break;
-        case 1:
-            robotLeft(i);
-            logger.log(INFO, "robotLeft");
-
-            if (afterDist[minIdx] == 0) {
-                robotGet(i);
-                logger.log(INFO, "get");
-            }
-            break;
-        case 2:
-            robotUpper(i);
-            logger.log(INFO, "robotUpper");
-            if (afterDist[minIdx] == 0) {
-                robotGet(i);
-                logger.log(INFO, "get");
-            }
-            break;
-        case 3:
-            robotDown(i);
-            logger.log(INFO, "robotDown");
-            if (afterDist[minIdx] == 0) {
-                robotGet(i);
-                logger.log(INFO, "get");
-            }
-            break;
-        default:
-            break;
-        }
-    } else { // 携带有货物
-        if (robot.y + 1 < n && dists[0][robot.x][robot.y + 1] < dists[0][robot.x][robot.y]) { // right
-            robotRight(i);
-            logger.log(INFO, "robotRight " + to_string(dists[0][robot.x][robot.y]));
-            if (dists[0][robot.x][robot.y] == 1) {
-                robotPull(i);
-                boats[0].num += gds.begin()->second;
-                boats[0].zId = zhenId + 50;
-                logger.log(INFO, "pull");
-                // logger.log(INFO, "boatGo " + to_string(boats[0].num));
-                // boatGo(0);
-            }
-        }
-        if (robot.y > 0 && dists[0][robot.x][robot.y - 1] < dists[0][robot.x][robot.y]) { // left
-            robotLeft(i);
-            logger.log(INFO, "robotLeft " + to_string(dists[0][robot.x][robot.y]));
-            if (dists[0][robot.x][robot.y] == 1) {
-                robotPull(i);
-                robotPull(i);
-                boats[0].num += gds.begin()->second;
-                boats[0].zId = zhenId + 50;
-                logger.log(INFO, "pull");
-                // logger.log(INFO, "boatGo " + to_string(boats[0].num));
-                // boatGo(0);
-            }
-        }
-        if (robot.x > 0 && dists[0][robot.x - 1][robot.y] < dists[0][robot.x][robot.y]) { // upper
-            robotUpper(i);
-            logger.log(INFO, "robotUpper " + to_string(dists[0][robot.x][robot.y]));
-            if (dists[0][robot.x][robot.y] == 1) {
-                robotPull(i);
-                robotPull(i);
-                boats[0].num += gds.begin()->second;
-                boats[0].zId = zhenId + 50;
-                logger.log(INFO, "pull");
-                // logger.log(INFO, "boatGo " + to_string(boats[0].num));
-                // boatGo(0);
-            }
-        }
-        if (robot.x + 1 < n && dists[0][robot.x + 1][robot.y] < dists[0][robot.x][robot.y]) { // down
-            robotDown(i);
-            logger.log(INFO, "robotDown " + to_string(dists[0][robot.x][robot.y]));
-            if (dists[0][robot.x][robot.y] == 1) {
-                robotPull(i);
-                robotPull(i);
-                boats[0].num += gds.begin()->second;
-                boats[0].zId = zhenId + 50;
-                logger.log(INFO, "pull");
-                // logger.log(INFO, "boatGo " + to_string(boats[0].num));
-                // boatGo(0);
-            }
+        if (boats[i].pos == -1 and boats[i].status == 1) {
+            logger.log(INFO, "boatShip");
+            boatShip(i, i);
         }
     }
 }
