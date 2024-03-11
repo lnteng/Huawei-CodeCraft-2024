@@ -1,4 +1,8 @@
 #pragma once
+#include <bits/stdc++.h>
+
+#include "logger.hpp"
+
 using namespace std;
 const int n = 200;
 const int robot_num = 10;
@@ -32,14 +36,17 @@ struct Berth {
 
 struct Boat {
     int num, pos, status;
+    int zId;
+    Boat(): num(0) {}
 } boats[10];
 
 int money, boat_capacity, id;
 char ch[N][N];
-int gds[N][N];
+// int gds[N][N];
 int dists[berth_num][N][N];
 
-struct Point {
-    int x;
-    int y;
-};
+#define Point pair<int, int>
+map<Point, int> gds;
+set<Point> paths[robot_num]; // 机器人走过的路径
+
+Logger logger("./replay/debug.log");

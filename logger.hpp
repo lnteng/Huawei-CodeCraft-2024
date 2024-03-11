@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <fstream>
 #include <ctime>
@@ -14,7 +15,7 @@ enum LogLevel {
 
 class Logger {
 public:
-    Logger(const std::string& filename) : log_file_(filename, std::ios::app) {
+    Logger(const std::string& filename) : log_file_(filename, std::ios::trunc) {
         if (!log_file_.is_open()) {
             std::cerr << "Error: Unable to open log file." << std::endl;
         }
