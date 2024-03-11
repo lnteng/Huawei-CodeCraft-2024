@@ -65,18 +65,6 @@ void printMoreDebugINfo() {
 }
 
 void Output(int zhenId) {
-    // 处理船舶
-    for (int i = 0; i < 5; i++) {
-        if (boats[i].pos == -1 && boats[i].status == 1) {
-            logger.log(INFO, "boatShip " + to_string(i) + " to " + to_string(i));
-            boatShip(i, i);
-        }
-        // if (boats[i].num > 0 && boats[i].status == 1) { 
-        if (zhenId == 14000) { 
-            logger.log(INFO, "boatGo " + to_string(i) + " with value "+ to_string(boats[i].num));
-            boatGo(i);
-        }
-    }
 
     int i = 0;
     Robot& robot = robots[i]; // demo: 仅操作一个机器人
@@ -91,6 +79,9 @@ void Output(int zhenId) {
             Point pGood;
             do {
                 std::srand(std::time(0));
+                if(gds.empty()) {
+                    break;
+                }
                 int randomIndex = std::rand() % gds.size();
                 auto it = gds.begin();
                 std::advance(it, randomIndex);
@@ -98,7 +89,7 @@ void Output(int zhenId) {
                 gds.erase(it);
                 paths = AStar(pRobut, pGood);
             } while (paths.empty());
-            logger.log(INFO, to_string(pRobut.first) + ", " + to_string(pRobut.second));
+            logger.log(INFO, "A star :robot"+to_string(pRobut.first) + ", " + to_string(pRobut.second));
             logger.log(INFO, to_string(pGood.first) + ", " + to_string(pGood.second));
             robot.newPath(paths);
             logger.log(INFO, "calc new path, lenght: " + to_string(robot.path.size()));
@@ -109,6 +100,7 @@ void Output(int zhenId) {
             robot.incrementPid();
         }
     } else { // 携带有货物
+        robot.newPath();
         for (int dir = 0; dir < 4; dir++) {
             if (isVaild(robot.x, robot.y, (Direct)dir) && dists[0][robot.x + dx[dir]][robot.y + dy[dir]] < dists[0][robot.x][robot.y]) { // TODO: bugfix
                 robotMove(i, (Direct)dir);
@@ -122,6 +114,19 @@ void Output(int zhenId) {
                     // boatGo(0);
                 }
             }
+        }
+    }
+
+    // 处理船舶
+    for (int i = 0; i < 5; i++) {
+        if (boats[i].pos == -1 && boats[i].status == 1) {
+            logger.log(INFO, "boatShip " + to_string(i) + " to " + to_string(i));
+            boatShip(i, i);
+        }
+        // if (boats[i].num > 0 && boats[i].status == 1) { 
+        if (zhenId == 14000) { 
+            logger.log(INFO, "boatGo " + to_string(i) + " with value "+ to_string(boats[i].num));
+            boatGo(i);
         }
     }
 }

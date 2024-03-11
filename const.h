@@ -16,6 +16,8 @@ enum Direct {
     down,
 };
 
+bool flag_get = false;
+
 struct Robot {
     int x, y, goods;
     int status;
@@ -37,6 +39,12 @@ struct Robot {
     void newPath(vector<Direct> &paths) {
         path.clear();
         pid = 0;
+        this->path = paths;
+    }
+    void newPath() {
+        path.clear();
+        pid = 0;
+        vector<Direct> paths;
         this->path = paths;
     }
 } robots[robot_num + 10];
