@@ -29,7 +29,8 @@ int Input() {
         int x, y, val;
         scanf("%d%d%d", &x, &y, &val);
         Point point = make_pair(x, y);
-        gds.insert({point, val});
+        // gds.insert({point, val});
+        gds[point] = GoodsProperty(val, id); //TODO：计算优先级
     }
     for (int i = 0; i < robot_num; i++) { // 机器人状态
         scanf("%d%d%d%d", &robots[i].goods, &robots[i].x, &robots[i].y, &robots[i].status);
@@ -78,15 +79,18 @@ void Output(int zhenId) {
             std::vector<Direct> paths;
             Point pGood;
             do {
-                std::srand(std::time(0));
+                // std::srand(std::time(0));
                 if(gds.empty()) {
                     break;
                 }
-                int randomIndex = std::rand() % gds.size();
-                auto it = gds.begin();
-                std::advance(it, randomIndex);
-                Point pGood = it->first; // 取出第一个 good
-                gds.erase(it);
+                // int randomIndex = std::rand() % gds.size();
+                // auto it = gds.begin();
+                // std::advance(it, randomIndex);
+                // Point pGood = it->first; // 取出第一个 good
+                // gds.erase(it);
+                pGood = gds.begin()->first;
+                // int value = gds.begin()->second;
+                gds.erase(gds.begin());
                 paths = AStar(pRobut, pGood);
             } while (paths.empty());
             logger.log(INFO, "A star :robot"+to_string(pRobut.first) + ", " + to_string(pRobut.second));

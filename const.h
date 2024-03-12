@@ -4,6 +4,7 @@
 
 using namespace std;
 #define Point pair<int, int>
+
 const int n = 200;
 const int robot_num = 10;
 const int berth_num = 10;
@@ -69,13 +70,47 @@ struct Boat {
     Boat(): num(0) {}
 } boats[10]; 
 
+// value, start_time, priority, robot_id
+struct GoodsProperty {
+    int value;
+    int start_time;
+    int priority;
+    int robot_id;
+    GoodsProperty() : value(0), start_time(0), priority(0), robot_id(-1) {}
+    GoodsProperty(int value, int start_time) {
+        this->value = value;
+        this->start_time = start_time; //zhenId
+        this->priority = 0; // 0为最低优先级
+        this->robot_id = -1; // -1:未被机器人搬运
+    }
+    void setPriority(int priority) { //TODO: 计算优先级
+        this->priority = priority;
+    }
+    void setRobotId(int robot_id) {
+        this->robot_id = robot_id;
+    }
+};
+
 int money, boat_capacity, id;
 char ch[N][N];
 // int gds[N][N];
 int dists[berth_num][N][N];
 
-map<Point, int> gds; // TODO: 换成unorder_map
-set<Point> paths[robot_num]; // 机器人走过的路径
+// 自定义哈希函数
+struct hash_pair {
+    size_t operator()(const pair<int, int>& p) const {
+        auto hash1 = hash<int>{}(p.first);
+        auto hash2 = hash<int>{}(p.second);
+        return hash1 ^ hash2;
+    }
+};
+
+unordered_map<Point, GoodsProperty, hash_pair> gds;
+
+
+
+
+set<pair<int, int>> paths[robot_num]; // 机器人走过的路径
 
 Logger logger("./replay/debug.log");
 
