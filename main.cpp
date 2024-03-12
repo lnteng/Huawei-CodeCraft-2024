@@ -74,14 +74,14 @@ Point pickGood(int bIdx, int zhenId) {
     for (const auto& gd : gds) {
         // good 不需要考虑 good 超时删除问题
         if (gd.second.end_time < zhenId) {
-            logger.log("newPriority1");
+            logger.log(INFO,"newPriority1");
 
             continue;
         }
         int dist = dists[bIdx][gd.first.first][gd.first.second];
         int newPriority = gd.second.value / dist;
         if (1 * dist + zhenId > gd.second.end_time) { // 当前机器人来不及处理该 good
-            logger.log("newPriority2");
+            logger.log(INFO,"newPriority2");
             continue;
         }
         if (newPriority > maxPriority) {
@@ -97,7 +97,7 @@ int nearBerth(Point curPoint) {
     int bIdx = 0;
     int minDist = INT16_MAX;
     for (int i: selected_berth) {
-        int newDist = dists[i][curPoint.first][curPoint.second];
+        int newDist = dists[selected_berth[i]][curPoint.first][curPoint.second];
         if (newDist < minDist) {
             bIdx = i;
             minDist = newDist;
@@ -111,7 +111,7 @@ void Output(int zhenId) {
         Robot& robot = robots[robotIdx]; // TODO: 多个机器人（先看看单个机器人的操作是否还需要封装）
         Point pRobut = make_pair(robot.x, robot.y);
         int berthIdx = nearBerth(pRobut);
-        Berth& berth = berths[berthIdx];
+        Berth& berth = berths[selected_berth[berthIdx]];
         if (robot.goods == 0) { // 未携带货物
             if (!robot.hasPath()) {
                 robotGet(robotIdx);
@@ -149,6 +149,37 @@ void Output(int zhenId) {
                         // logger.log(INFO, "boatGo " + to_string(boats[0].num));
                     }
                 }
+            }
+        }
+    }
+
+    // 处理船舶
+    for (int i = 0; i < 5; i++) {
+        if (boats[i].status == 0) { // 船舶状态为 0,
+            continue;
+        }
+        if (boats[i].status == 2) { // TODO：船舶状态为 1，是否已有船舶在泊位上
+            logger.log(INFO, "boats.status: 1");
+        }
+        if (boats[i].pos == -1) {
+            logger.log(INFO, "boatShip " + to_string(i) + " to " + to_string(i));
+            boatShip(i, i);
+        }
+        Berth& berth = berths[selected_berth[boats[i].pos]];
+        bool end_flag = (berth.transport_time+zhenId==14991||berth.transport_time+zhenId==14990); // TODO ：快要结束时，船舶前往虚拟点（注意避免重复指令导致刷新运送时间）
+        if (berth.remain_goods_num >= boat_capacity) {
+            berth.remain_goods_num -= berth.loading_speed;
+            boats[i].num += berth.loading_speed;          
+        } else {
+            if (berth.remain_goods_num > 0) {
+                boats[i].num += berth.remain_goods_num;
+                berth.remain_goods_num = 0;
+                logger.log(INFO, "loading goods end");
+            } else {
+                if (boats->pos != -1){
+                    logger.log(INFO, "boatGo " + to_string(i));
+                    boatGo(i);
+                } 
             }
         }
     }
