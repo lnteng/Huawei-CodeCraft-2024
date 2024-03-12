@@ -4,12 +4,14 @@
 
 using namespace std;
 #define Point pair<int, int>
+#define zhen_total 15000 // 总帧数
 
 const int n = 200;
 const int robot_num = 10;
 const int berth_num = 10;
 const int N = 210;
 const int thousand = 1000; 
+const int Fault_tolerance = 5; // 时间容错，单位：帧，用于船舶最后返航时间的容错
 
 enum Direct {
     right,
@@ -21,7 +23,7 @@ enum Direct {
 struct Robot {
     int x, y, goods;
     int status;
-    int mbx, mby;
+    // int mbx, mby;
     vector<Direct> path; // 记录 A* 计算的路径
     int pid; // 走到第几步
     Robot() {}
@@ -77,23 +79,18 @@ struct GoodsProperty {
     int value;
     int end_time;
     int priority;
-    int robot_id;
-    GoodsProperty() : value(0), end_time(0), priority(0), robot_id(-1) {}
+    GoodsProperty() : value(0), end_time(0), priority(0) {}
     GoodsProperty(int value, int start_time) {
         this->value = value;
         this->end_time = start_time + thousand; //zhenId
         this->priority = 0; // 0为最低优先级
-        this->robot_id = -1; // -1:未被机器人搬运
     }
     void setPriority(int priority) { //TODO: 计算优先级
         this->priority = priority;
     }
-    void setRobotId(int robot_id) {
-        this->robot_id = robot_id;
-    }
 };
 
-int money, boat_capacity, id;
+int money, boat_capacity, id; //boat_capacity相同
 char ch[N][N];
 // int gds[N][N];
 int dists[berth_num][N][N];

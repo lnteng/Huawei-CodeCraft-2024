@@ -18,7 +18,7 @@ void Init() {
     char okk[100];
     scanf("%s", okk);
     getDistByBfs();
-    vector<int> selectedBerth = selectBerth();
+    selectBerth();
     Ok();
     fflush(stdout);
 }
@@ -31,7 +31,6 @@ int Input() {
         int x, y, val;
         scanf("%d%d%d", &x, &y, &val);
         Point point = make_pair(x, y);
-        // gds.insert({point, val});
         gds[point] = GoodsProperty(val, id); //TODO：计算优先级
     }
     for (int i = 0; i < robot_num; i++) { // 机器人状态
@@ -108,12 +107,13 @@ int nearBerth(Point curPoint) {
 
 void Output(int zhenId) {
     for (int robotIdx = 0; robotIdx < robot_num; robotIdx++) {
-        Robot& robot = robots[robotIdx]; // TODO: 多个机器人（先看看单个机器人的操作是否还需要封装）
+        Robot& robot = robots[robotIdx]; 
         Point pRobut = make_pair(robot.x, robot.y);
-        int berthIdx = nearBerth(pRobut);
+        int berthIdx = nearBerth(pRobut); // TODO : 检查算法是否正确
         Berth& berth = berths[selected_berth[berthIdx]];
         if (robot.goods == 0) { // 未携带货物
-            if (!robot.hasPath()) {
+            if (!robot.hasPath()) { // 在停泊点（放下货物后）或到达货物所在位置（还未拿起货物时）
+                logger.log(formatString("robot pid {} ,path.size {}",robot.pid,robot.path.size()));
                 robotGet(robotIdx);
                 logger.log(INFO, "get");
                 logger.log(INFO, "robot current pos: " + to_string(pRobut.first) + ", " + to_string(pRobut.second));
@@ -131,20 +131,20 @@ void Output(int zhenId) {
                 robot.newPath(paths);
                 logger.log(INFO, "calc new path, lenght: " + to_string(robot.path.size()));
             } else {
-                logger.log(INFO, "move along path, idx: " +  to_string(robot.pid));
+                // logger.log(INFO, "move along path, idx: " +  to_string(robot.pid));
                 // 根据计算出来的最短路径移动 robot
                 robotMove(robotIdx, robot.path[robot.pid]);
                 robot.incrementPid();
             }
         } else { // 携带有货物
-            robot.newPath();
+            robot.newPath(); // TODO：检查了下如果删掉这一句可能会报错：Segmentation fault (core dumped)
             for (int dir = 0; dir < 4; dir++) {
                 if (isVaild(robot.x, robot.y, (Direct)dir) && dists[0][robot.x + dx[dir]][robot.y + dy[dir]] < dists[0][robot.x][robot.y]) { // TODO: bugfix
                     robotMove(robotIdx, (Direct)dir);
                     logger.log(INFO, to_string((Direct)dir) + " " + to_string(dists[0][robot.x][robot.y]));
                     if (dists[0][robot.x][robot.y] == 1) {
                         robotPull(robotIdx);
-                        berth.remain_goods_num += 1; // TODO:remain pull success
+                        berth.remain_goods_num += 1;
                         logger.log(INFO, "pull");
                         // logger.log(INFO, "boatGo " + to_string(boats[0].num));
                     }
@@ -156,28 +156,41 @@ void Output(int zhenId) {
     // 处理船舶
     for (int i = 0; i < 5; i++) {
         if (boats[i].status == 0) { // 船舶状态为 0,
+            if (boats[i].num !=0) {
+                boats[i].num =0;
+            }
             continue;
         }
         if (boats[i].status == 2) { // TODO：船舶状态为 1，是否已有船舶在泊位上
             logger.log(INFO, "boats.status: 1");
+            continue;
         }
         if (boats[i].pos == -1) {
             logger.log(INFO, "boatShip " + to_string(i) + " to " + to_string(i));
-            boatShip(i, i);
+            boatShip(i, i); // TODO：选择
+            continue;
         }
         Berth& berth = berths[selected_berth[boats[i].pos]];
-        bool end_flag = (berth.transport_time+zhenId==14991||berth.transport_time+zhenId==14990); // TODO ：快要结束时，船舶前往虚拟点（注意避免重复指令导致刷新运送时间）
-        if (berth.remain_goods_num >= boat_capacity) {
+        // bool end_flag = (berth.transport_time+zhenId==14991||berth.transport_time+zhenId==14990); // TODO ：快要结束时，船舶前往虚拟点（注意避免重复指令导致刷新运送时间）
+        bool end_flag = (berth.transport_time + zhenId + Fault_tolerance > zhen_total);
+        if (berth.remain_goods_num >= berth.loading_speed && !end_flag && boats[i].num + berth.loading_speed <= boat_capacity) {
+            // 船舶装载货物空间充足且港口剩余货物充足且未临近结束时间
             berth.remain_goods_num -= berth.loading_speed;
-            boats[i].num += berth.loading_speed;          
+            boats[i].num += berth.loading_speed;  
         } else {
-            if (berth.remain_goods_num > 0) {
-                boats[i].num += berth.remain_goods_num;
-                berth.remain_goods_num = 0;
-                logger.log(INFO, "loading goods end");
-            } else {
-                if (boats->pos != -1){
-                    logger.log(INFO, "boatGo " + to_string(i));
+            if ((berth.remain_goods_num > 0 || boats[i].num + berth.loading_speed > boat_capacity)&& !end_flag) {
+                if (berth.remain_goods_num > boat_capacity - boats[i].num){
+                    berth.remain_goods_num = boat_capacity - (boat_capacity -boats[i].num);
+                    boats[i].num = boat_capacity;
+                    logger.log(INFO, "boatGo " + to_string(i)); 
+                    boatGo(i);
+                }else{
+                    boats[i].num += berth.remain_goods_num;
+                    berth.remain_goods_num = 0;
+                }
+            } else { //船舶装载完毕或船舶剩余货物未空或临近结束时间
+                if (boats->pos != -1 && (end_flag || boats[i].num == boat_capacity)){ //船舶装载完毕或船舶剩余货物未空
+                    logger.log(INFO, "boatGo " + to_string(i)); 
                     boatGo(i);
                 } 
             }
@@ -189,7 +202,7 @@ void Output(int zhenId) {
 int main() {
     Init();
     // printMoreDebugINfo();
-    for(int zhen = 1; zhen <= 15000; zhen ++) {
+    for(int zhen = 1; zhen <= zhen_total; zhen ++) {
         int zhenId = Input();
         if (zhen == 1 and id > 1) {
             logger.log(ERROR, "初始化超时: " + to_string(id-zhen) + " 帧 ");

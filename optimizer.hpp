@@ -5,7 +5,7 @@
 */
 
 // 选择固定港口，在初始化BFS后调用
-vector<int> selectBerth() {
+void selectBerth() {
     //全局变量 dists[berth_num][N][N]; 记录任一点到港口i的最短距离
     //全局变量 berths[berth_num + 10]
     // 函数实现：现在要求按照哈夫曼树的思路选择港口，即选择最小的两个港口，然后合并成一个新的港口组，直到只剩下五个港口
@@ -54,7 +54,5 @@ vector<int> selectBerth() {
     for (int i = 0; i < 5; i++) { // 或者考虑用指针数组
         selected_berth[i] = res[i]; 
     }
-    return res;
-
-    
+    return;
 }
