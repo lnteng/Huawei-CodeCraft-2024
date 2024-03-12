@@ -63,6 +63,7 @@ struct Berth {
         this->remain_goods_num=0;
     }
 } berths[berth_num + 10];
+int selected_berth[5]; // 选择的固定港口ID
 
 struct Boat {
     int num, pos, status; //num:use for logging the number of goods on boat
@@ -73,13 +74,13 @@ struct Boat {
 // value, start_time, priority, robot_id
 struct GoodsProperty {
     int value;
-    int start_time;
+    int end_time;
     int priority;
     int robot_id;
-    GoodsProperty() : value(0), start_time(0), priority(0), robot_id(-1) {}
+    GoodsProperty() : value(0), end_time(0), priority(0), robot_id(-1) {}
     GoodsProperty(int value, int start_time) {
         this->value = value;
-        this->start_time = start_time; //zhenId
+        this->end_time = start_time + 1000; //zhenId
         this->priority = 0; // 0为最低优先级
         this->robot_id = -1; // -1:未被机器人搬运
     }
@@ -110,7 +111,7 @@ unordered_map<Point, GoodsProperty, hash_pair> gds;
 
 
 
-set<pair<int, int>> paths[robot_num]; // 机器人走过的路径
+// set<pair<int, int>> paths[robot_num]; // 机器人走过的路径
 
 Logger logger("./replay/debug.log");
 

@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include "move.hpp"
 #include "graph.hpp"
+#include "optimizer.hpp"
 
 void Init() {
     for (int i = 0; i < n; i++) { // 从 ch[0][0] -> ch[n-1][n-1]
@@ -17,6 +18,7 @@ void Init() {
     char okk[100];
     scanf("%s", okk);
     getDistByBfs();
+    vector<int> selectedBerth = selectBerth();
     Ok();
     fflush(stdout);
 }
@@ -68,9 +70,9 @@ void printMoreDebugINfo() {
 void Output(int zhenId) {
 
     int i = 0;
-    Robot& robot = robots[i]; // demo: 仅操作一个机器人
+    Robot& robot = robots[i]; // demo: 仅操作一个机器人 // TODO: 多个机器人（先看看单个机器人的操作是否还需要封装）
     Point pRobut = make_pair(robot.x, robot.y);
-    Berth& berth = berths[0]; // 前往第一个 berth
+    Berth& berth = berths[selected_berth[0]]; // 前往第一个 berth
     if (robot.goods == 0) { // 未携带货物
         if (!robot.hasPath()) {
             robotGet(i);
@@ -130,24 +132,8 @@ void Output(int zhenId) {
             logger.log(INFO, "boatShip " + to_string(i) + " to " + to_string(i));
             boatShip(i, i);
         }
-        bool end_flag = (berth.transport_time+zhenId==14991||berth.transport_time+zhenId==14990);
-        // if ((berth.remain_goods_num > boat_capacity || end_flag) 
-        //     && boats[i].status == 1 && zhenId%2 && boats[i].num >= boat_capacity*0.9) {  
-        //     if (berth.remain_goods_num >= berth.loading_speed && !end_flag) {
-        //         berth.remain_goods_num -= berth.loading_speed;
-        //         boats[i].num += berth.loading_speed;
-        //     } else {
-        //         if (berth.remain_goods_num >= 0 && !end_flag) {
-        //             boats[i].num += berth.remain_goods_num;
-        //             berth.remain_goods_num = 0;
-        //             logger.log(INFO, "loading goods end");
-        //         }else{
-        //             logger.log(INFO, "boatGo " + to_string(i));
-        //             boatGo(i);
-        //         }
-        //     }
-        // }
-        if (berth.remain_goods_num > boat_capacity * 0.9) {
+        bool end_flag = (berth.transport_time+zhenId==14991||berth.transport_time+zhenId==14990); // TODO ：快要结束时，船舶前往虚拟点（注意避免重复指令导致刷新运送时间）
+        if (berth.remain_goods_num >= boat_capacity) {
             berth.remain_goods_num -= berth.loading_speed;
             boats[i].num += berth.loading_speed;          
         } else {
@@ -167,9 +153,12 @@ void Output(int zhenId) {
 
 int main() {
     Init();
-    printMoreDebugINfo();
+    // printMoreDebugINfo();
     for(int zhen = 1; zhen <= 15000; zhen ++) {
         int zhenId = Input();
+        if (zhen == 1 and id > 1) {
+            logger.log(ERROR, "初始化超时: " + to_string(id-zhen) + " 帧 ");
+        }
         Output(zhenId);
         Ok();
         fflush(stdout);
