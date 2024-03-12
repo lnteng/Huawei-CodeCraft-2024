@@ -9,6 +9,7 @@ const int n = 200;
 const int robot_num = 10;
 const int berth_num = 10;
 const int N = 210;
+const int thousand = 1000; 
 
 enum Direct {
     right,
@@ -80,7 +81,7 @@ struct GoodsProperty {
     GoodsProperty() : value(0), end_time(0), priority(0), robot_id(-1) {}
     GoodsProperty(int value, int start_time) {
         this->value = value;
-        this->end_time = start_time + 1000; //zhenId
+        this->end_time = start_time + thousand; //zhenId
         this->priority = 0; // 0为最低优先级
         this->robot_id = -1; // -1:未被机器人搬运
     }
@@ -107,11 +108,6 @@ struct hash_pair {
 };
 
 unordered_map<Point, GoodsProperty, hash_pair> gds;
-
-
-
-
-// set<pair<int, int>> paths[robot_num]; // 机器人走过的路径
 
 Logger logger("./replay/debug.log");
 

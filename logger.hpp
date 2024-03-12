@@ -54,6 +54,10 @@ public:
         }
     }
 
+    void log(const std::string& message) {
+        this->log(INFO, message);
+    }
+
 private:
     std::ofstream log_file_;
 
@@ -64,3 +68,34 @@ private:
         return oss.str();
     }
 };
+
+// 辅助函数，用于递归处理可变参数
+void replacePlaceholdersHelper(std::string& result, size_t& pos, int arg) {
+    std::stringstream ss;
+    ss << arg;
+    result.replace(pos, 2, ss.str());
+}
+
+// 递归处理可变参数
+template <typename... Args>
+void replacePlaceholdersHelper(std::string& result, size_t& pos, int arg, Args... args) {
+    replacePlaceholdersHelper(result, pos, arg);
+
+    // 查找下一个占位符的位置
+    pos = result.find("{}", pos + 1);
+
+    // 递归处理下一个参数
+    replacePlaceholdersHelper(result, pos, args...);
+}
+
+// 可变参数的主函数
+template <typename... Args>
+std::string formatString(const std::string& templateStr, Args... args) {
+    std::string result = templateStr;
+    size_t pos = result.find("{}");
+
+    // 调用辅助函数处理可变参数
+    replacePlaceholdersHelper(result, pos, args...);
+
+    return result;
+}
