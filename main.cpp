@@ -90,7 +90,6 @@ void Output(int zhenId) {
                 paths = AStar(pRobut, pGood);
             } while (paths.empty());
             logger.log(INFO, "A star :robot"+to_string(pRobut.first) + ", " + to_string(pRobut.second));
-            logger.log(INFO, to_string(pGood.first) + ", " + to_string(pGood.second));
             robot.newPath(paths);
             logger.log(INFO, "calc new path, lenght: " + to_string(robot.path.size()));
         } else {
@@ -107,11 +106,9 @@ void Output(int zhenId) {
                 logger.log(INFO, to_string((Direct)dir) + " " + to_string(dists[0][robot.x][robot.y]));
                 if (dists[0][robot.x][robot.y] == 1) {
                     robotPull(i);
-                    // boats[0].num += gds.begin()->second;
-                    // boats[0].zId = zhenId + 50;
+                    berth.remain_goods_num += 1; // TODO:remain pull success
                     logger.log(INFO, "pull");
                     // logger.log(INFO, "boatGo " + to_string(boats[0].num));
-                    // boatGo(0);
                 }
             }
         }
@@ -119,14 +116,47 @@ void Output(int zhenId) {
 
     // 处理船舶
     for (int i = 0; i < 5; i++) {
-        if (boats[i].pos == -1 && boats[i].status == 1) {
+        if (boats[i].status == 0) { // 船舶状态为 0,
+            continue;
+        }
+        if (boats[i].status == 2) { // TODO：船舶状态为 1，是否已有船舶在泊位上
+            logger.log(INFO, "boats.status: 1");
+        }
+        if (boats[i].pos == -1) {
             logger.log(INFO, "boatShip " + to_string(i) + " to " + to_string(i));
             boatShip(i, i);
         }
-        // if (boats[i].num > 0 && boats[i].status == 1) { 
-        if (zhenId == 14000) { 
-            logger.log(INFO, "boatGo " + to_string(i) + " with value "+ to_string(boats[i].num));
-            boatGo(i);
+        bool end_flag = (berth.transport_time+zhenId==14991||berth.transport_time+zhenId==14990);
+        // if ((berth.remain_goods_num > boat_capacity || end_flag) 
+        //     && boats[i].status == 1 && zhenId%2 && boats[i].num >= boat_capacity*0.9) {  
+        //     if (berth.remain_goods_num >= berth.loading_speed && !end_flag) {
+        //         berth.remain_goods_num -= berth.loading_speed;
+        //         boats[i].num += berth.loading_speed;
+        //     } else {
+        //         if (berth.remain_goods_num >= 0 && !end_flag) {
+        //             boats[i].num += berth.remain_goods_num;
+        //             berth.remain_goods_num = 0;
+        //             logger.log(INFO, "loading goods end");
+        //         }else{
+        //             logger.log(INFO, "boatGo " + to_string(i));
+        //             boatGo(i);
+        //         }
+        //     }
+        // }
+        if (berth.remain_goods_num > boat_capacity * 0.9) {
+            berth.remain_goods_num -= berth.loading_speed;
+            boats[i].num += berth.loading_speed;          
+        } else {
+            if (berth.remain_goods_num > 0) {
+                boats[i].num += berth.remain_goods_num;
+                berth.remain_goods_num = 0;
+                logger.log(INFO, "loading goods end");
+            } else {
+                if (boats->pos != -1){
+                    logger.log(INFO, "boatGo " + to_string(i));
+                    boatGo(i);
+                } 
+            }
         }
     }
 }

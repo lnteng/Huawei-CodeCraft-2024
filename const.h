@@ -16,8 +16,6 @@ enum Direct {
     down,
 };
 
-bool flag_get = false;
-
 struct Robot {
     int x, y, goods;
     int status;
@@ -54,27 +52,29 @@ struct Berth {
     int y;
     int transport_time;
     int loading_speed;
+    int remain_goods_num;
     Berth() {}
     Berth(int x, int y, int transport_time, int loading_speed) {
         this->x = x;
         this->y = y;
         this->transport_time = transport_time;
         this->loading_speed = loading_speed;
+        this->remain_goods_num=0;
     }
 } berths[berth_num + 10];
 
 struct Boat {
-    int num, pos, status;
+    int num, pos, status; //num:use for logging the number of goods on boat
     int zId;
     Boat(): num(0) {}
-} boats[10];
+} boats[10]; 
 
 int money, boat_capacity, id;
 char ch[N][N];
 // int gds[N][N];
 int dists[berth_num][N][N];
 
-map<Point, int> gds;
+map<Point, int> gds; // TODO: 换成unorder_map
 set<Point> paths[robot_num]; // 机器人走过的路径
 
 Logger logger("./replay/debug.log");
