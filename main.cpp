@@ -139,10 +139,11 @@ void Output(int zhenId) {
             if (!robot.hasPath()) {
                 if (gds.count(pRobut) > 0) { // 当前位置有货物
                     robotGet(robotIdx);
-                    logger.log(INFO, "get");
+                    logger.log(INFO, formatString("{}: get {},{}",zhenId, robot.x, robot.y));
                     gds.erase(pRobut);
                 } else { // 当前位置没有货物
                     if(gds.empty()) {
+                        logger.log(ERROR,formatString("gds is empty, robot: {} ", zhenId));
                         continue;
                     }
                     int randomIndex = std::rand() % gds.size();
@@ -150,6 +151,7 @@ void Output(int zhenId) {
                     std::advance(it, randomIndex);
                     Point pGood = it->first;
                     vector<Direct> paths = AStar(pRobut, pGood);
+                    logger.log(formatString("if :{} :robot {},{} ->pickGood: {},{}:{}", zhenId,robot.x, robot.y,pGood.first, pGood.second,paths.size()));
                     robot.newPath(paths);
                     continue;
                 }
@@ -172,9 +174,10 @@ void Output(int zhenId) {
                     if (dists[berthIdx][robot.x][robot.y] == 0) {
                         robotPull(robotIdx);
                         berth.remain_goods_num += 1;
-                        logger.log(INFO, "pull");
+                        logger.log(INFO, formatString("{}: pull {},{}",zhenId, robot.x, robot.y));
                         Point pGood = pickGood(berthIdx, zhenId);
                         vector<Direct> paths = AStar(make_pair(robot.x, robot.y), pGood);
+                        logger.log(formatString("{} :robot {},{} ->pickGood: {},{}:{}", zhenId,robot.x, robot.y,pGood.first, pGood.second,paths.size()));
                         robot.newPath(paths);
                     }
                 }

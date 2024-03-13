@@ -90,7 +90,7 @@ vector<Direct> AStar(Point p1, Point p2) {
 
     // 定义访问数组，记录每个位置是否已经访问过
     vector<vector<bool>> visited(N, vector<bool>(N, false));
-    visited[p1.first][p2.second] = true;
+    visited[p1.first][p1.second] = true; //visited[p1.first][p2.second] = true;
 
     // 定义父节点数组，记录每个节点的父节点
     vector<vector<Point>> parent(N, vector<Point>(N, {-1, -1}));
@@ -130,7 +130,7 @@ vector<Direct> AStar(Point p1, Point p2) {
             int ny = cur.y + dy[i];
 
             // 判断新位置是否有效
-            if (nx >= 0 && nx < N && ny >= 0 && ny < N && !visited[nx][ny] && ch[nx][ny] == '.') {
+            if (nx >= 0 && nx < n && ny >= 0 && ny < n && !visited[nx][ny] && (ch[nx][ny] == '.' || ch[nx][ny] == 'B')) {
                 visited[nx][ny] = true;
                 parent[nx][ny] = {cur.x, cur.y};
                 Node next(nx, ny, cur.g + 1, calcManhattanDist(nx, ny, p2.first, p2.second));
