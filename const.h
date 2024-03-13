@@ -105,6 +105,7 @@ struct hash_pair {
 };
 
 unordered_map<Point, GoodsProperty, hash_pair> gds;
+unordered_map<Point, bool, hash_pair> gds_flag; // good 是否被 robot 标记
 
 Logger logger("./replay/debug.log");
 

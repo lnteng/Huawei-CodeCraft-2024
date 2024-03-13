@@ -23,6 +23,27 @@ void Init() {
     fflush(stdout);
 }
 
+inline void robotMove(int idx, Direct dir) {
+    robots[idx].x += dx[dir];
+    robots[idx].y += dy[dir];
+    switch (dir) {
+        case Direct::right:
+            robotRight(idx);
+            break;
+        case Direct::left:
+            robotLeft(idx);
+            break;
+        case Direct::down:
+            robotDown(idx);
+            break;
+        case Direct::upper:
+            robotUpper(idx);
+            break;
+        default:
+            break;
+    }
+}
+
 int Input() {
     scanf("%d%d", &id, &money); // 帧序号 当前金钱数
     int num;
@@ -32,6 +53,7 @@ int Input() {
         scanf("%d%d%d", &x, &y, &val);
         Point point = make_pair(x, y);
         gds[point] = GoodsProperty(val, id); //TODO：计算优先级
+        gds_flag[point] = false;
     }
     for (int i = 0; i < robot_num; i++) { // 机器人状态
         scanf("%d%d%d%d", &robots[i].goods, &robots[i].x, &robots[i].y, &robots[i].status);
@@ -73,22 +95,23 @@ Point pickGood(int bIdx, int zhenId) {
     for (const auto& gd : gds) {
         // good 不需要考虑 good 超时删除问题
         if (gd.second.end_time < zhenId) {
-            logger.log(INFO,"newPriority1");
-
+            gds_flag[p] = true;
+            continue;
+        }
+        if (gds_flag[gd.first] == true) {
             continue;
         }
         int dist = dists[bIdx][gd.first.first][gd.first.second];
         int newPriority = gd.second.value / dist;
         if (1 * dist + zhenId > gd.second.end_time) { // 当前机器人来不及处理该 good
-            logger.log(INFO,"newPriority2");
             continue;
         }
         if (newPriority > maxPriority) {
-            logger.log("newPriority3");
             p = gd.first;
             maxPriority = newPriority;
         }
     }
+    gds_flag[p] = true;
     return p;
 }
 
@@ -106,48 +129,53 @@ int nearBerth(Point curPoint) {
 }
 
 void Output(int zhenId) {
-    for (int robotIdx = 0; robotIdx < robot_num; robotIdx++) { // TODO
-    // for (int robotIdx = 0; robotIdx < 2; robotIdx++) {
+    for (int robotIdx = 0; robotIdx < robot_num; robotIdx++) {
         Robot& robot = robots[robotIdx]; 
         Point pRobut = make_pair(robot.x, robot.y);
-        int berthIdx = nearBerth(pRobut); // TODO : 检查算法是否正确
-        Berth& berth = berths[berthIdx];
+        if (robot.status == 0) { // 碰撞后的恢复状态
+            continue;
+        }
         if (robot.goods == 0) { // 未携带货物
-            if (!robot.hasPath()) { // 在停泊点（放下货物后）或到达货物所在位置（还未拿起货物时）
-                logger.log(formatString("robot pid {} ,path.size {}",robot.pid,robot.path.size()));
-                robotGet(robotIdx);
-                logger.log(INFO, "get");
-                logger.log(INFO, "robot current pos: " + to_string(pRobut.first) + ", " + to_string(pRobut.second));
-                std::vector<Direct> paths;
-                Point pGood;
-                do {
+            if (!robot.hasPath()) {
+                if (gds.count(pRobut) > 0) { // 当前位置有货物
+                    robotGet(robotIdx);
+                    logger.log(INFO, "get");
+                    gds.erase(pRobut);
+                } else { // 当前位置没有货物
                     if(gds.empty()) {
-                        break;
+                        continue;
                     }
-                    pGood = pickGood(berthIdx, zhenId);
-                    gds.erase(gds.begin());
-                    paths = AStar(pRobut, pGood);
-                } while (paths.empty());
-                logger.log(INFO, "A star :robot"+to_string(pRobut.first) + ", " + to_string(pRobut.second));
-                robot.newPath(paths);
-                logger.log(INFO, "calc new path, lenght: " + to_string(robot.path.size()));
+                    int randomIndex = std::rand() % gds.size();
+                    auto it = gds.begin();
+                    std::advance(it, randomIndex);
+                    Point pGood = it->first;
+                    vector<Direct> paths = AStar(pRobut, pGood);
+                    robot.newPath(paths);
+                    continue;
+                }
             } else {
-                // logger.log(INFO, "move along path, idx: " +  to_string(robot.pid));
                 // 根据计算出来的最短路径移动 robot
                 robotMove(robotIdx, robot.path[robot.pid]);
                 robot.incrementPid();
             }
         } else { // 携带有货物
-            robot.newPath(); // TODO：检查了下如果删掉这一句可能会报错：Segmentation fault (core dumped)
-            for (int dir = 0; dir < 4; dir++) {
+            int berthIdx = nearBerth(make_pair(robot.x, robot.y));
+            Berth& berth = berths[berthIdx];
+            vector<int> nums = {0, 1, 2, 3};
+            std::random_device rd;
+            std::mt19937 g(rd());
+            // 打乱数组顺序
+            std::shuffle(nums.begin(), nums.end(), g);
+            for (int dir: nums) {
                 if (isVaild(robot.x, robot.y, (Direct)dir) && dists[berthIdx][robot.x + dx[dir]][robot.y + dy[dir]] < dists[berthIdx][robot.x][robot.y]) { // TODO: bugfix
                     robotMove(robotIdx, (Direct)dir);
-                    logger.log(INFO, to_string((Direct)dir) + " " + to_string(dists[berthIdx][robot.x][robot.y]));
-                    if (dists[berthIdx][robot.x][robot.y] == 1) {
+                    if (dists[berthIdx][robot.x][robot.y] == 0) {
                         robotPull(robotIdx);
                         berth.remain_goods_num += 1;
                         logger.log(INFO, "pull");
-                        // logger.log(INFO, "boatGo " + to_string(boats[0].num));
+                        Point pGood = pickGood(berthIdx, zhenId);
+                        vector<Direct> paths = AStar(make_pair(robot.x, robot.y), pGood);
+                        robot.newPath(paths);
                     }
                 }
             }

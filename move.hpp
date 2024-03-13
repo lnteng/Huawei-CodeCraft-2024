@@ -47,22 +47,3 @@ inline void boatGo(int idb) {
 inline void Ok() {
     printf("OK\n");
 }
-
-inline void robotMove(int idx, Direct dir) {
-    switch (dir) {
-        case Direct::right:
-            robotRight(idx);
-            break;
-        case Direct::left:
-            robotLeft(idx);
-            break;
-        case Direct::down:
-            robotDown(idx);
-            break;
-        case Direct::upper:
-            robotUpper(idx);
-            break;
-        default:
-            break;
-    }
-}
