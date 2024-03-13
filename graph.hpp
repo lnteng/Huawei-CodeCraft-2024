@@ -69,6 +69,21 @@ int calcManhattanDist(int x1, int y1, int x2, int y2) { //曼哈顿距离
     return abs(x2 - x1) + abs(y2 - y1);
 }
 
+void printMoreDebugINfo() {
+    for (int i = 0; i < berth_num; i++) { // debug
+        for (int x = 0; x < N; x++) {
+            std::ostringstream oss;
+            oss << "[";
+            for (int y = 0; y < N; y++) {
+                oss << dists[i][x][y] << "\t";
+            }
+            oss << "]";
+            logger.log(INFO, oss.str());
+        }
+    }
+}
+
+
 // 定位点属于港口区域
 int locateBelongBerth(Point point) { 
     // 返回值：返回地图点位所属的固定港口区域的id

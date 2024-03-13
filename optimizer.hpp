@@ -4,6 +4,34 @@
     实现最优化和选择相关的算法：选择港口、船舶、物品等
 */
 
+// 选择货物
+Point pickGood(int bIdx, int zhenId) {
+    Point p;
+    int maxPriority = 0;
+    for (const auto& gd : gds) {
+        // good 不需要考虑 good 超时删除问题
+        if (gd.second.end_time < zhenId) {
+            // gds_flag[p] = true;
+            continue;
+        }
+        if (gds_flag[gd.first] == true) {
+            continue;
+        }
+        int dist = dists[bIdx][gd.first.first][gd.first.second];
+        int newPriority = gd.second.value / dist;
+        if (1 * dist + zhenId > gd.second.end_time) { // 当前机器人来不及处理该 good
+            continue;
+        }
+        if (newPriority > maxPriority) {
+            p = gd.first;
+            maxPriority = newPriority;
+        }
+    }
+    gds_flag[p] = true;
+    return p;
+}
+
+// 选择港口
 // 选择固定港口，在初始化BFS后调用
 void InitselectBerth() {
     //全局变量 dists[berth_num][N][N]; 记录任一点到港口i的最短距离
@@ -55,6 +83,19 @@ void InitselectBerth() {
         selected_berth[i] = res[i]; 
     }
     return;
+}
+
+int nearBerth(Point curPoint) {
+    int bIdx = 0;
+    int minDist = INT16_MAX;
+    for (int i: selected_berth) {
+        int newDist = dists[i][curPoint.first][curPoint.second];
+        if (newDist < minDist) {
+            bIdx = i;
+            minDist = newDist;
+        }
+    }
+    return bIdx; //返回对应港口的dist下标
 }
 
 int shipBackBerth (int boatId) { 

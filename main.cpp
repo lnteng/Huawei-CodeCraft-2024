@@ -76,60 +76,6 @@ bool isVaild(int x, int y, Direct dir) {
     return true;
 }
 
-void printMoreDebugINfo() {
-    for (int i = 0; i < berth_num; i++) { // debug
-        for (int x = 0; x < N; x++) {
-            std::ostringstream oss;
-            oss << "[";
-            for (int y = 0; y < N; y++) {
-                oss << dists[i][x][y] << "\t";
-            }
-            oss << "]";
-            logger.log(INFO, oss.str());
-        }
-    }
-}
-
-
-Point pickGood(int bIdx, int zhenId) {
-    Point p;
-    int maxPriority = 0;
-    for (const auto& gd : gds) {
-        // good 不需要考虑 good 超时删除问题
-        if (gd.second.end_time < zhenId) {
-            // gds_flag[p] = true;
-            continue;
-        }
-        if (gds_flag[gd.first] == true) {
-            continue;
-        }
-        int dist = dists[bIdx][gd.first.first][gd.first.second];
-        int newPriority = gd.second.value / dist;
-        if (1 * dist + zhenId > gd.second.end_time) { // 当前机器人来不及处理该 good
-            continue;
-        }
-        if (newPriority > maxPriority) {
-            p = gd.first;
-            maxPriority = newPriority;
-        }
-    }
-    gds_flag[p] = true;
-    return p;
-}
-
-int nearBerth(Point curPoint) {
-    int bIdx = 0;
-    int minDist = INT16_MAX;
-    for (int i: selected_berth) {
-        int newDist = dists[i][curPoint.first][curPoint.second];
-        if (newDist < minDist) {
-            bIdx = i;
-            minDist = newDist;
-        }
-    }
-    return bIdx; //返回对应港口的dist下标
-}
-
 void Output(int zhenId) {
     for (int robotIdx = 0; robotIdx < 1; robotIdx++) {
         Robot& robot = robots[robotIdx]; 
@@ -200,8 +146,9 @@ void Output(int zhenId) {
             continue;
         }
         if (boats[i].pos == -1) {
-            logger.log(INFO, "boatShip " + to_string(i) + " to " + to_string(i));
-            boatShip(i, selected_berth[i]); // TODO：选择
+            int berth_id = selected_berth[shipBackBerth(i)];
+            logger.log(INFO, "boatShip " + to_string(i) + " to " + to_string(berth_id));
+            boatShip(i, berth_id); 
             continue;
         }
         Berth& berth = berths[boats[i].pos];
