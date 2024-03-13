@@ -96,21 +96,22 @@ int nearBerth(Point curPoint) {
     int bIdx = 0;
     int minDist = INT16_MAX;
     for (int i: selected_berth) {
-        int newDist = dists[selected_berth[i]][curPoint.first][curPoint.second];
+        int newDist = dists[i][curPoint.first][curPoint.second];
         if (newDist < minDist) {
             bIdx = i;
             minDist = newDist;
         }
     }
-    return bIdx;
+    return bIdx; //返回对应港口的dist下标
 }
 
 void Output(int zhenId) {
-    for (int robotIdx = 0; robotIdx < robot_num; robotIdx++) {
+    for (int robotIdx = 0; robotIdx < robot_num; robotIdx++) { // TODO
+    // for (int robotIdx = 0; robotIdx < 2; robotIdx++) {
         Robot& robot = robots[robotIdx]; 
         Point pRobut = make_pair(robot.x, robot.y);
         int berthIdx = nearBerth(pRobut); // TODO : 检查算法是否正确
-        Berth& berth = berths[selected_berth[berthIdx]];
+        Berth& berth = berths[berthIdx];
         if (robot.goods == 0) { // 未携带货物
             if (!robot.hasPath()) { // 在停泊点（放下货物后）或到达货物所在位置（还未拿起货物时）
                 logger.log(formatString("robot pid {} ,path.size {}",robot.pid,robot.path.size()));
@@ -139,10 +140,10 @@ void Output(int zhenId) {
         } else { // 携带有货物
             robot.newPath(); // TODO：检查了下如果删掉这一句可能会报错：Segmentation fault (core dumped)
             for (int dir = 0; dir < 4; dir++) {
-                if (isVaild(robot.x, robot.y, (Direct)dir) && dists[0][robot.x + dx[dir]][robot.y + dy[dir]] < dists[0][robot.x][robot.y]) { // TODO: bugfix
+                if (isVaild(robot.x, robot.y, (Direct)dir) && dists[berthIdx][robot.x + dx[dir]][robot.y + dy[dir]] < dists[berthIdx][robot.x][robot.y]) { // TODO: bugfix
                     robotMove(robotIdx, (Direct)dir);
-                    logger.log(INFO, to_string((Direct)dir) + " " + to_string(dists[0][robot.x][robot.y]));
-                    if (dists[0][robot.x][robot.y] == 1) {
+                    logger.log(INFO, to_string((Direct)dir) + " " + to_string(dists[berthIdx][robot.x][robot.y]));
+                    if (dists[berthIdx][robot.x][robot.y] == 1) {
                         robotPull(robotIdx);
                         berth.remain_goods_num += 1;
                         logger.log(INFO, "pull");
@@ -167,10 +168,10 @@ void Output(int zhenId) {
         }
         if (boats[i].pos == -1) {
             logger.log(INFO, "boatShip " + to_string(i) + " to " + to_string(i));
-            boatShip(i, i); // TODO：选择
+            boatShip(i, selected_berth[i]); // TODO：选择
             continue;
         }
-        Berth& berth = berths[selected_berth[boats[i].pos]];
+        Berth& berth = berths[boats[i].pos];
         // bool end_flag = (berth.transport_time+zhenId==14991||berth.transport_time+zhenId==14990); // TODO ：快要结束时，船舶前往虚拟点（注意避免重复指令导致刷新运送时间）
         bool end_flag = (berth.transport_time + zhenId + Fault_tolerance > zhen_total);
         if (berth.remain_goods_num >= berth.loading_speed && !end_flag && boats[i].num + berth.loading_speed <= boat_capacity) {
