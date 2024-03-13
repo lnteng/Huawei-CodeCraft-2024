@@ -61,12 +61,31 @@ void getDistByBfs() {
     }
 }
 
-int calcEulerDist2(int x1, int y1, int x2, int y2) {
+int calcEulerDist2(int x1, int y1, int x2, int y2) { //欧式距离
     return pow(x2 - x1, 2) + pow(y2 - y1, 2);
 }
 
-int calcManhattanDist(int x1, int y1, int x2, int y2) {
+int calcManhattanDist(int x1, int y1, int x2, int y2) { //曼哈顿距离
     return abs(x2 - x1) + abs(y2 - y1);
+}
+
+// 定位点属于港口区域
+int locateBelongBerth(Point point) { 
+    // 返回值：返回地图点位所属的固定港口区域的id
+    int best_berth_id = 0;
+    for (int i = 1; i < select_berth_num; i++) {
+        best_berth_id = dists[best_berth_id][point.first][point.second] < dists[i][point.first][point.second] ? best_berth_id : i;
+    }
+    return best_berth_id;
+}
+
+// 初始化地图点位所属泊位区域
+void initBelongBerth() {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            berth_field[i][j] = locateBelongBerth(make_pair(i, j));
+        }
+    }
 }
 
 // 定义节点

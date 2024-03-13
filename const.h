@@ -4,14 +4,19 @@
 
 using namespace std;
 #define Point pair<int, int>
-#define zhen_total 15000 // 总帧数
 
-const int n = 200;
+const int zhen_total = 15000; // 总帧数
+const int n = 200; //实际地图宽度
 const int robot_num = 10;
 const int berth_num = 10;
-const int N = 210;
+const int boat_num = 5; // 船只数量
+const int N = 210; 
 const int thousand = 1000; 
 const int Fault_tolerance = 5; // 时间容错，单位：帧，用于船舶最后返航时间的容错
+const int boat_return_weight = 0.8 ; // 港口剩余货物充足的判定，相较于船舶容量
+const int select_berth_num = 5; // 选择的固定港口数量
+
+
 
 enum Direct {
     right,
@@ -94,6 +99,7 @@ int money, boat_capacity, id; //boat_capacity相同
 char ch[N][N];
 // int gds[N][N];
 int dists[berth_num][N][N];
+int berth_field[N][N]; //属于固定港口的区域id
 
 // 自定义哈希函数
 struct hash_pair {

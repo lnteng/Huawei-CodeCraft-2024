@@ -8,6 +8,7 @@
 void Init() {
     for (int i = 0; i < n; i++) { // 从 ch[0][0] -> ch[n-1][n-1]
         scanf("%s", ch[i]);
+        logger.log(ch[i]);
     }
     for (int i = 0; i < berth_num; i++) {
         int id;
@@ -18,7 +19,8 @@ void Init() {
     char okk[100];
     scanf("%s", okk);
     getDistByBfs();
-    selectBerth();
+    InitselectBerth();
+    initBelongBerth();
     Ok();
     fflush(stdout);
 }
@@ -95,7 +97,7 @@ Point pickGood(int bIdx, int zhenId) {
     for (const auto& gd : gds) {
         // good 不需要考虑 good 超时删除问题
         if (gd.second.end_time < zhenId) {
-            gds_flag[p] = true;
+            // gds_flag[p] = true;
             continue;
         }
         if (gds_flag[gd.first] == true) {
@@ -129,7 +131,7 @@ int nearBerth(Point curPoint) {
 }
 
 void Output(int zhenId) {
-    for (int robotIdx = 0; robotIdx < robot_num; robotIdx++) {
+    for (int robotIdx = 0; robotIdx < 1; robotIdx++) {
         Robot& robot = robots[robotIdx]; 
         Point pRobut = make_pair(robot.x, robot.y);
         if (robot.status == 0) { // 碰撞后的恢复状态
