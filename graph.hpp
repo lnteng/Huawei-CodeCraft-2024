@@ -13,7 +13,7 @@ void getDistByBfs() {
 
         for (int x = 0; x < N; x++) { // 初始化未访问过
             for (int y = 0; y < N; y++) {
-                dists[i][x][y] = INT16_MAX;
+                dists[i][x][y] = MAX_LIMIT;
             }
         }
 
@@ -31,26 +31,26 @@ void getDistByBfs() {
                 Point cur_point = que.front();
                 que.pop();                
                 if (cur_point.second + 1 < n) { // right
-                    // 没有访问过的坐标，并且该坐标为空地('.'表示)
-                    if (dists[i][cur_point.first][cur_point.second + 1] > step && ch[cur_point.first][cur_point.second + 1] == '.') {
+                    // 没有访问过的坐标，并且该坐标为机器人可到达的坐标
+                    if (dists[i][cur_point.first][cur_point.second + 1] > step && isRobotAccessible(cur_point.first,cur_point.second + 1)) {
                         dists[i][cur_point.first][cur_point.second + 1] = step;
                         que.push(Point(cur_point.first, cur_point.second + 1));
                     }
                 }
                 if (cur_point.second > 0) { // left
-                    if (dists[i][cur_point.first][cur_point.second - 1] > step && ch[cur_point.first][cur_point.second - 1] == '.') {
+                    if (dists[i][cur_point.first][cur_point.second - 1] > step && isRobotAccessible(cur_point.first,cur_point.second - 1)) {
                         dists[i][cur_point.first][cur_point.second - 1] = step;
                         que.push(Point(cur_point.first, cur_point.second - 1));
                     }
                 }
                 if (cur_point.first > 0) { // upper
-                    if (dists[i][cur_point.first - 1][cur_point.second] > step && ch[cur_point.first - 1][cur_point.second] == '.') {
+                    if (dists[i][cur_point.first - 1][cur_point.second] > step && isRobotAccessible(cur_point.first -1,cur_point.second)) {
                         dists[i][cur_point.first - 1][cur_point.second] = step;
                         que.push(Point(cur_point.first - 1, cur_point.second));
                     }
                 }
                 if (cur_point.first + 1 < n) { // down
-                    if (dists[i][cur_point.first + 1][cur_point.second] > step && ch[cur_point.first + 1][cur_point.second] == '.') {
+                    if (dists[i][cur_point.first + 1][cur_point.second] > step && isRobotAccessible(cur_point.first +1,cur_point.second)) {
                         dists[i][cur_point.first + 1][cur_point.second] = step;
                         que.push(Point(cur_point.first + 1, cur_point.second));
                     }
@@ -69,17 +69,26 @@ int calcManhattanDist(int x1, int y1, int x2, int y2) { //曼哈顿距离
     return abs(x2 - x1) + abs(y2 - y1);
 }
 
-void printMoreDebugINfo() {
-    for (int i = 0; i < berth_num; i++) { // debug
-        for (int x = 0; x < N; x++) {
-            std::ostringstream oss;
-            oss << "[";
-            for (int y = 0; y < N; y++) {
-                oss << dists[i][x][y] << "\t";
-            }
-            oss << "]";
-            logger.log(INFO, oss.str());
+void printMoreDebugINfo(int berth_index) {
+    // for (int i = 0; i < berth_num; i++) { // debug
+    //     for (int x = 0; x < N; x++) {
+    //         std::ostringstream oss;
+    //         oss << "[";
+    //         for (int y = 0; y < N; y++) {
+    //             oss << dists[i][x][y] << "\t";
+    //         }
+    //         oss << "]";
+    //         logger.log(INFO, oss.str());
+    //     }
+    // }
+    for (int x = 0; x < N; x++) {
+        std::ostringstream oss;
+        oss << "[";
+        for (int y = 0; y < N; y++) {
+            oss << dists[4][x][y] << "\t";
         }
+        oss << "]";
+        logger.log(INFO, oss.str());
     }
 }
 
@@ -88,9 +97,10 @@ void printMoreDebugINfo() {
 int locateBelongBerth(Point point) { 
     // 返回值：返回地图点位所属的固定港口区域的id
     int best_selected_berth_id = -1; // 不可达区域
-    if (ch[point.first][point.second] != '.' && ch[point.first][point.second] != 'B' && ch[point.first][point.second] != 'A') {
+    if (!isRobotAccessible(point.first,point.second)) {
         return best_selected_berth_id;
     }
+    best_selected_berth_id = 0;
     for (int i = 1; i < select_berth_num; i++) {
         best_selected_berth_id = dists[selected_berth[best_selected_berth_id]][point.first][point.second] 
             < dists[selected_berth[i]][point.first][point.second] ? best_selected_berth_id : i;
@@ -159,7 +169,7 @@ vector<Direct> AStar(Point p1, Point p2) {
             int ny = cur.y + dy[i];
 
             // 判断新位置是否有效
-            if (nx >= 0 && nx < n && ny >= 0 && ny < n && !visited[nx][ny] && (ch[nx][ny] == '.' || ch[nx][ny] == 'B')) {
+            if (nx >= 0 && nx < n && ny >= 0 && ny < n && !visited[nx][ny] && isRobotAccessible(nx, ny)) {
                 visited[nx][ny] = true;
                 parent[nx][ny] = {cur.x, cur.y};
                 Node next(nx, ny, cur.g + 1, calcManhattanDist(nx, ny, p2.first, p2.second));

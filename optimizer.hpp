@@ -9,6 +9,9 @@ Point pickGood(int bIdx, int zhenId) {
     Point p;
     int maxPriority = 0;
     for (const auto& gd : gds) {
+        if (selected_berth[locateBelongBerth(gd.first)]!=bIdx){
+            continue;
+        }
         // good 不需要考虑 good 超时删除问题
         if (gd.second.end_time < zhenId) {
             // gds_flag[p] = true;
@@ -76,6 +79,7 @@ void InitselectBerth() {
                 best_berth = i;
             }
         }
+        // TODO 选择最中间的未代表港口或第一帧修改
         // 将代表港口的id加入结果
         res.push_back(best_berth);
     }
@@ -88,21 +92,21 @@ void InitselectBerth() {
             berth_field[i][j] = locateBelongBerth(make_pair(i, j));
         }
     }
-    // for (int x = 0; x < n; x++) {
-    //     std::ostringstream oss;
-    //     oss << "[";
-    //     for (int y = 0; y < n; y++) {
-    //         oss << berth_field[x][y] << "\t";
-    //     }
-    //     oss << "]";
-    //     logger.log(INFO, oss.str());
-    // }
+    for (int x = 0; x < n; x++) {
+        std::ostringstream oss;
+        oss << "[";
+        for (int y = 0; y < n; y++) {
+            oss << berth_field[x][y] << "\t";
+        }
+        oss << "]";
+        logger.log(INFO, oss.str());
+    }
     
     return;
 }
 
 // 初始化机器人所属区域和路径 //TODO 测试
-void BFSPathSearch (int robotIdx, int selected_berthIdx) { // 机器人前往区域路径，进入区域后，机器人会自动选择货物目标
+void BFSPathSearch (int robotIdx, int selected_berthIdx,int max_path) { // 机器人前往区域路径，进入区域后，机器人会自动选择货物目标
     Robot& robot = robots[robotIdx]; 
     Point pRobut = make_pair(robot.x, robot.y); // 模拟机器人位置
     vector<Direct> paths;
@@ -118,39 +122,54 @@ void BFSPathSearch (int robotIdx, int selected_berthIdx) { // 机器人前往区
                 && dists[selected_berth[selected_berthIdx]][pRobut.first + dx[dir]][pRobut.second + dy[dir]] 
                     < dists[selected_berth[selected_berthIdx]][pRobut.first][pRobut.second]) { 
                 paths.push_back((Direct)dir); 
+                // logger.log(INFO, formatString("paths size:{},dist:{}", paths.size(),dists[selected_berth[selected_berthIdx]][pRobut.first + dx[dir]][pRobut.second + dy[dir]]));
+                // logger.log(INFO, formatString("selected_berthIdx:{},berth_field[pRobut.first][pRobut.second]:{}", selected_berthIdx,berth_field[pRobut.first][pRobut.second]));
                 if (berth_field[pRobut.first][pRobut.second] == selected_berthIdx) {
-                    reverse(paths.begin(), paths.end()); // 出栈顺序恢复为路径
+                    // reverse(paths.begin(), paths.end()); // 出栈顺序恢复为路径
                     robot.newPath(paths);
-                    // logger.log(INFO, formatString("paths size:{}", paths.size()));
+                    logger.log(INFO, formatString("find paths size:{}", paths.size()));
                     return;
                 }
                 pRobut.first += dx[dir]; //预测机器人移动后的位置，会在边界后多走几步
                 pRobut.second += dy[dir];
             }   
         }
-    }while(berth_field[pRobut.first][pRobut.second] == selected_berthIdx);
-    
-    
-
-
+    }while(paths.size() <= max_path);
+    logger.log(ERROR,"BFSPathSearch over max_path");
 }
 void InitRobot() {
+    //初始化机器人信息
+    {
+        int robot_index = 0;
+        for (int x = 0; x < n; x++) { // 观察到机器人是按(x,y)由小到大的顺序返回信息
+            for (int y = 0; y < n; y++) {
+                if (ch[x][y] == 'A') {
+                    robots[robot_index].x = x;
+                    robots[robot_index].y = y;
+                    robots[robot_index].goods = 0;
+                    robots[robot_index].status = 1;
+                    robot_index++; // TODO 注意数组越界
+                }
+            }
+        }
+    }
+   
+
     // 初始化机器人所属区域
     // 思路：从dists[berth_num][N][N]获取任意点到任意港口的最短距离，现在希望将10个机器人，对10个机器人分配5个港口
     // 现在要求用开销小且简洁的代码实现机器人分配到港口，要求每个港口至少有一个机器人，所有机器人移动的总距离最小
     // 返回值：返回机器人分配的港口的id的vector
 
-    // 计算每个港口到机器人的最大距离,距离最大的港口先分配机器人
-    // 创建pair<int,int>数组存储每个港口到机器人的最大距离
-    pair<int, int> max_dist[select_berth_num];
+    // 计算每个港口到机器人的最大距离,距离最大的港口先分配机器人（控制总移动次数）
+    pair<int, int> max_dist[select_berth_num]; //固定港口id和每个固定港口到机器人的最大距离
     for (int select_berth_id = 0; select_berth_id < select_berth_num; select_berth_id++) {
         max_dist[select_berth_id] = make_pair(select_berth_id, 0);
         for (int robot_id = 0; robot_id < robot_num; robot_id++) {
-            if (dists[selected_berth[select_berth_id]][robots[robot_id].x][robots[robot_id].y] == INT16_MAX) { //和BFS默认的不可达距离保持一致
+            if (dists[selected_berth[select_berth_id]][robots[robot_id].x][robots[robot_id].y] == MAX_LIMIT) { //和BFS默认的不可达距离保持一致
                 continue;
             }
             max_dist[select_berth_id].second = max(max_dist[select_berth_id].second, dists[selected_berth[select_berth_id]][robots[robot_id].x][robots[robot_id].y]);
-            logger.log(formatString("max_dist[select_berth_id].second:{}",max_dist[select_berth_id].second));
+            // logger.log(formatString("max_dist[select_berth_id].second:{}",max_dist[select_berth_id].second));
         }
     }
     sort(max_dist, max_dist + select_berth_num, [](pair<int, int> a, pair<int, int> b) {
@@ -159,28 +178,59 @@ void InitRobot() {
     for (int i = 0; i < select_berth_num; i++) { // 选五个机器人
         // 港口选择距离最小的机器人
         int min_dist = INT_MAX;
-        int best_robot = -1;
+        int best_robot_id = -1;
         for (int j = 0; j < robot_num; j++) { 
             if (dists[selected_berth[max_dist[i].first]][robots[j].x][robots[j].y] < min_dist
             && robots[j].path.size() == 0) { // TODO:确认机器人和港口位置不会重叠
                 min_dist = dists[selected_berth[max_dist[i].first]][robots[j].x][robots[j].y];
-                best_robot = j;            
+                best_robot_id = j;            
             }
         }
-        logger.log(INFO,formatString("robot {} ->berth {} :{}", best_robot, max_dist[i].first,dists[selected_berth[max_dist[i].first]][robots[best_robot].x][robots[best_robot].y]));
-        BFSPathSearch(best_robot, max_dist[i].first); //设置机器人初始路径
+        // logger.log(INFO,formatString("init:robot {} ({},{}) ->berth {} ({},{}):{}", 
+        //     best_robot_id,robots[best_robot_id].x,robots[best_robot_id].y, 
+        //     max_dist[i].first,
+        //     berths[selected_berth[max_dist[i].first]].x,berths[selected_berth[max_dist[i].first]].y,
+        //     dists[selected_berth[max_dist[i].first]][robots[best_robot_id].x][robots[best_robot_id].y]));
+        // 机器人best_robot分配到港口max_dist[i].first
+        BFSPathSearch(best_robot_id, max_dist[i].first,dists[selected_berth[max_dist[i].first]][robots[best_robot_id].x][robots[best_robot_id].y]); //设置机器人初始路径
     }
-    // TODO：剩下五个机器人的处理，初步考虑就近找船舶
+    // TODO：剩下五个机器人的处理：每个港口按照运输时间由小到大依次分配机器人
+    pair<int,int> berth_trasnport_time[select_berth_num];
+    for (int i = 0; i < select_berth_num; i++) {
+        berth_trasnport_time[i] = make_pair(i, berths[selected_berth[i]].transport_time);
+    }
+    sort(berth_trasnport_time, berth_trasnport_time + select_berth_num, [](pair<int, int> a, pair<int, int> b) {
+        return a.second < b.second;
+    });// 排序：按照运输时间由小到大
+    for (int selected_berth_id = 0; selected_berth_id < select_berth_num; selected_berth_id++) {
+        int min_dist = INT_MAX;
+        int best_robot_id = -1;
+        for (int robot_id = 0; robot_id < robot_num; robot_id++) {
+            if (dists[selected_berth[berth_trasnport_time[selected_berth_id].first]][robots[robot_id].x][robots[robot_id].y] < min_dist
+            && robots[robot_id].path.size() == 0) {
+                min_dist = dists[selected_berth[berth_trasnport_time[selected_berth_id].first]][robots[robot_id].x][robots[robot_id].y];
+                best_robot_id = robot_id;
+            }
+        }
+        // logger.log(INFO,formatString("init:robot {} ({},{})", 
+        //     best_robot_id,robots[best_robot_id].x,robots[best_robot_id].y));
+        // logger.log(INFO,formatString(" ->berth {} ({},{}) :{}",
+        //     berth_trasnport_time[selected_berth_id].first,
+        //     berths[selected_berth[berth_trasnport_time[selected_berth_id].first]].x,berths[selected_berth[berth_trasnport_time[selected_berth_id].first]].y,
+        //     dists[selected_berth[berth_trasnport_time[selected_berth_id].first]][robots[best_robot_id].x][robots[best_robot_id].y]));
+        BFSPathSearch(best_robot_id, berth_trasnport_time[selected_berth_id].first,dists[selected_berth[berth_trasnport_time[selected_berth_id].first]][robots[best_robot_id].x][robots[best_robot_id].y]); //设置机器人初始路径
+    }
+
     
 
-    // 机器人分配到港口
+    
         
 
 }
 
-int nearBerth(Point curPoint) {
+int nearBerth(Point curPoint) { // TODO:限制寻找区域内货物
     int bIdx = 0;
-    int minDist = INT16_MAX;
+    int minDist = MAX_LIMIT;
     for (int i: selected_berth) {
         int newDist = dists[i][curPoint.first][curPoint.second];
         if (newDist < minDist) {

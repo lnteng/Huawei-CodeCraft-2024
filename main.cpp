@@ -14,14 +14,17 @@ void Init() {
         int id;
         scanf("%d", &id);
         scanf("%d%d%d%d", &berths[id].x, &berths[id].y, &berths[id].transport_time, &berths[id].loading_speed);
+        // logger.log(INFO, formatString("{} :berth {}: x,y:{},{}", id,i, berths[id].x, berths[id].y));
     }
     scanf("%d", &boat_capacity);
+    logger.log(INFO, formatString("boat_capacity: {}", boat_capacity));
     char okk[100];
     scanf("%s", okk);
     getDistByBfs();
-    InitselectBerth(); // 确定固定港口和初始化地图点位所属泊位区域
-    InitRobot(); //初始化机器人路径，实现固定港口区域分配 //TODO 疑似初始化超时
+    InitselectBerth(); // 设置港口初始位置，确定固定港口和初始化地图点位所属泊位区域 //TODO 初始化时没有固定港口信息
+    InitRobot(); //初始化机器人路径，实现固定港口区域分配 //TODO 疑似初始化超时,先根据地图确定初始机器人位置。问题：初始机器人顺序未知
     Ok();
+    logger.log(INFO, "Init OK");
     fflush(stdout);
 }
 
@@ -59,6 +62,7 @@ int Input() {
     }
     for (int i = 0; i < robot_num; i++) { // 机器人状态
         scanf("%d%d%d%d", &robots[i].goods, &robots[i].x, &robots[i].y, &robots[i].status);
+        // logger.log(INFO, formatString("{}: robot {} x,y:{},{}",id, i, robots[i].x,robots[i].y));
     }
     for (int i = 0; i < 5; i++) { // 船状态
         scanf("%d%d\n", &boats[i].status, &boats[i].pos);
@@ -71,7 +75,8 @@ int Input() {
 
 
 void Output(int zhenId) {
-    for (int robotIdx = 0; robotIdx < 5; robotIdx++) { //TODO 测试前五个机器人
+    // logger.log(INFO, formatString("zhenId: {}", zhenId));
+    for (int robotIdx = 0; robotIdx < robot_num; robotIdx++) { //TODO 测试前五个机器人
         Robot& robot = robots[robotIdx]; 
         Point pRobut = make_pair(robot.x, robot.y);
         if (robot.status == 0) { // 碰撞后的恢复状态
@@ -88,17 +93,19 @@ void Output(int zhenId) {
                         logger.log(ERROR,formatString("gds is empty, robot: {} ", zhenId));
                         continue;
                     }
+                    Point pGood;
                     int randomIndex = std::rand() % gds.size();
                     auto it = gds.begin();
-                    std::advance(it, randomIndex);
-                    Point pGood = it->first;
+                    std::advance(it, randomIndex++);
+                    pGood = it->first;
+                    if (randomIndex >= gds.size() || randomIndex<0) {continue;}
                     vector<Direct> paths = AStar(pRobut, pGood);
                     logger.log(formatString("if :{} :robot {},{} ->pickGood: {},{}:{}", zhenId,robot.x, robot.y,pGood.first, pGood.second,paths.size()));
                     robot.newPath(paths);
                     continue;
                 }
             } else {
-                // 根据计算出来的最短路径移动 robot
+                // 根据计算出来的最短路径移动
                 robotMove(robotIdx, robot.path[robot.pid]);
                 robot.incrementPid();
             }
@@ -177,7 +184,7 @@ void Output(int zhenId) {
 
 int main() {
     Init();
-    // printMoreDebugINfo();
+    printMoreDebugINfo(4);
     for(int zhen = 1; zhen <= zhen_total; zhen ++) {
         int zhenId = Input();
         if (zhen == 1 and id > 1) {

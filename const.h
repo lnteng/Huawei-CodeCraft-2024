@@ -15,6 +15,7 @@ const int thousand = 1000;
 const int Fault_tolerance = 5; // 时间容错，单位：帧，用于船舶最后返航时间的容错
 const double boat_return_weight = 0.8 ; // 港口剩余货物充足的判定，相较于船舶容量
 const int select_berth_num = 5; // 选择的固定港口数量
+const int MAX_LIMIT = 999; // 将此距离视为不可达，后续修改已有的INT_MAX和INT16_MAX
 
 
 
@@ -26,11 +27,12 @@ enum Direct {
 };
 
 struct Robot {
-    int x, y, goods;
+    int x, y, goods; 
     int status;
     // int mbx, mby;
-    vector<Direct> path; // 记录 A* 计算的路径
+    vector<Direct> path; // 记录 A* 计算的路径 
     int pid; // 走到第几步
+    int dir; // 机器人下一步方向 //TODO: 机器人下一步方向
     Robot() {}
     Robot(int startX, int startY) {
         x = startX;
@@ -126,4 +128,8 @@ bool isVaild(int x, int y, Direct dir) {
         return false;
     }
     return true;
+}
+
+inline bool isRobotAccessible(int x, int y) {
+    return ch[x][y] == '.' || ch[x][y] == 'A' || ch[x][y] == 'B';
 }
