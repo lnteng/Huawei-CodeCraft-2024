@@ -1,31 +1,43 @@
 #pragma once
 #include "const.h"
 /*
-    实现最优化和选择相关的算法：选择港口、船舶、物品等
+    实现最优化和选择相关的算法：选择泊位、船舶、物品等
 */
 
-// 选择货物
-Point pickGood(int bIdx, int zhenId) {
+/**
+ * @brief 选择货物
+ *
+ * @param bIdx 泊位ID
+ * @param zhenId 当前帧数
+ * @return 选择的货物坐标
+ */
+Point pickGood(int bIdx, int zhenId)
+{
     Point p;
     int maxPriority = 0;
-    for (const auto& gd : gds) {
-        if (selected_berth[locateBelongBerth(gd.first)]!=bIdx){
+    for (const auto &gd : gds)
+    {
+        if (selected_berth[locateBelongBerth(gd.first)] != bIdx)
+        { // 选择区域内货物
             continue;
         }
         // good 不需要考虑 good 超时删除问题
-        if (gd.second.end_time < zhenId) {
-            // gds_flag[p] = true;
+        if (gd.second.end_time < zhenId)
+        {
             continue;
         }
-        if (gds_flag[gd.first] == true) {
+        if (gds_flag[gd.first] == true)
+        { // 已经被标记
             continue;
         }
         int dist = dists[bIdx][gd.first.first][gd.first.second];
         int newPriority = gd.second.value / dist;
-        if (1 * dist + zhenId > gd.second.end_time) { // 当前机器人来不及处理该 good
+        if (1 * dist + zhenId > gd.second.end_time)
+        { // 当前机器人来不及处理该 good //TODO 这个1时什么？
             continue;
         }
-        if (newPriority > maxPriority) {
+        if (newPriority > maxPriority)
+        {
             p = gd.first;
             maxPriority = newPriority;
         }
@@ -34,80 +46,115 @@ Point pickGood(int bIdx, int zhenId) {
     return p;
 }
 
-// 选择港口
-// 选择固定港口，在初始化BFS后调用
-void InitselectBerth() {
-    //全局变量 dists[berth_num][N][N]; 记录任一点到港口i的最短距离
-    //全局变量 berths[berth_num + 10]
-    // 函数实现：现在要求按照哈夫曼树的思路选择港口，即选择最小的两个港口，然后合并成一个新的港口组，直到只剩下五个港口
-    // 然后，每个港口组选择装载速度最大的港口
-    // 返回值：返回选择的港口的id的vector
+// 选择泊位
+// 选择固定泊位，在初始化BFS后调用
+/**
+ * @brief 初始化泊位选择。
+ *
+ * 该函数根据哈夫曼树方法选择泊位。
+ * 首先选择两个最小的泊位并将它们合并到一个新的泊位组中。
+ * 这个过程一直持续到只剩下五个泊位组为止。 然后，从每组中选择装载速度最大的泊位。
+ *
+ * @return 包含所选泊位 ID 的vector。
+ *
+ * @note 全局变量 dists[berth_num][N][N] 记录任一点到泊位 i 的最短距离。
+ * @note 全局变量 berths[berth_num + 10] 记录泊位的信息。
+ * @note 全局变量 selected_berth[5] 固定泊位seleted_berth_id到泊位id
+ */
+void InitselectBerth()
+{
     vector<int> res;
-    // 使用优先队列存储港口组，队列中的元素是一个pair，第一个元素是港口组的最小距离，第二个元素是港口组中的港口id
+    // 使用优先队列存储泊位组，队列中的元素是一个pair，第一个元素是泊位组的最小距离，第二个元素是泊位组中的泊位id
     priority_queue<pair<int, vector<int>>, vector<pair<int, vector<int>>>, greater<pair<int, vector<int>>>> pq;
-    // 初始化，每个港口都是一个港口组
-    for (int i = 0; i < berth_num ; i++) {
+    for (int i = 0; i < berth_num; i++)
+    { // 初始化，每个泊位都是一个泊位组
         pq.push({dists[i][berths[i].x][berths[i].y], {i}});
     }
-    // 合并港口组，直到只剩下五个港口组
-    while (pq.size() > 5) {
-        // 取出距离最小的两个港口组
-        auto group1 = pq.top(); pq.pop();
-        auto group2 = pq.top(); pq.pop();
-        // 合并两个港口组
+    while (pq.size() > 5)
+    { // 合并泊位组，直到只剩下五个泊位组
+        // 取出距离最小的两个泊位组
+        auto group1 = pq.top();
+        pq.pop();
+        auto group2 = pq.top();
+        pq.pop();
+        // 合并两个泊位组
         group1.second.insert(group1.second.end(), group2.second.begin(), group2.second.end());
-        // 计算新的港口组的最小距离
-        int min_dist = INT_MAX;
-        for (int i : group1.second) {
-            for (int j : group1.second) {
-                if (i != j) {
+        // 计算新的泊位组的最小距离
+        int min_dist = MAX_LIMIT;
+        for (int i : group1.second)
+        {
+            for (int j : group1.second)
+            {
+                if (i != j)
+                {
                     min_dist = min(min_dist, dists[j][berths[i].x][berths[i].y]);
                 }
             }
         }
-        // 将新的港口组放入队列
+        // 将新的泊位组放入队列
         pq.push({min_dist, group1.second});
     }
-    // 选择每个港口组的代表港口
-    while (!pq.empty()) {
-        auto group = pq.top(); pq.pop();
-        int min_time = INT_MAX;
+    // 选择每个泊位组的代表泊位
+    while (!pq.empty())
+    {
+        auto group = pq.top();
+        pq.pop();
+        int min_time = MAX_LIMIT;
         int best_berth = -1;
-        for (int i : group.second) {
-            if (berths[i].transport_time < min_time) {
+        for (int i : group.second)
+        {
+            if (berths[i].transport_time < min_time)
+            {
                 min_time = berths[i].transport_time;
                 best_berth = i;
             }
         }
-        // TODO 选择最中间的未代表港口或第一帧修改
-        // 将代表港口的id加入结果
+        // TODO 选择最中间的代表泊位或第一帧修改
+        // 将代表泊位的id加入结果
         res.push_back(best_berth);
     }
-    for (int i = 0; i < 5; i++) { // 或者考虑用指针数组
-        selected_berth[i] = res[i]; 
+    // 初始化全局变量 selected_berth 固定泊位数组
+    for (int i = 0; i < 5; i++)
+    {
+        selected_berth[i] = res[i];
     }
     // 初始化地图点位所属泊位区域
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
             berth_field[i][j] = locateBelongBerth(make_pair(i, j));
         }
     }
-    for (int x = 0; x < n; x++) {
+    for (int x = 0; x < n; x++)
+    {
         std::ostringstream oss;
         oss << "[";
-        for (int y = 0; y < n; y++) {
+        for (int y = 0; y < n; y++)
+        {
             oss << berth_field[x][y] << "\t";
         }
         oss << "]";
         logger.log(INFO, oss.str());
     }
-    
+
     return;
 }
 
-// 初始化机器人所属区域和路径 //TODO 测试
-void BFSPathSearch (int robotIdx, int selected_berthIdx,int max_path) { // 机器人前往区域路径，进入区域后，机器人会自动选择货物目标
-    Robot& robot = robots[robotIdx]; 
+/**
+ * @brief 根据已有的广度优先搜索以找到机器人移动到选定泊位区域的路径。
+ *
+ * @param robotsIdx 机器人的索引。
+ * @param selected_berthIdx 所选泊位的索引。
+ * @param max_path 要考虑的最大路径数。
+ * @return 无返回值。
+ *
+ * @note 全局变量 dists[berth_num][N][N] 记录任一点到泊位 i 的最短距离。
+ * @note 机器人进入区域后会自动选择该区域的货物目标。
+ */
+void BFSPathSearch(int robotIdx, int selected_berthIdx, int max_path)
+{ // 机器人前往区域路径，进入区域后，机器人会自动选择货物目标
+    Robot &robot = robots[robotIdx];
     Point pRobut = make_pair(robot.x, robot.y); // 模拟机器人位置
     vector<Direct> paths;
     vector<int> nums = {0, 1, 2, 3};
@@ -116,142 +163,161 @@ void BFSPathSearch (int robotIdx, int selected_berthIdx,int max_path) { // 机�
     std::mt19937 g(rd());
     // 打乱数组顺序
     std::shuffle(nums.begin(), nums.end(), g);
-    do{
-        for (int dir: nums) {
-            if (isVaild(pRobut.first, pRobut.second, (Direct)dir) 
-                && dists[selected_berth[selected_berthIdx]][pRobut.first + dx[dir]][pRobut.second + dy[dir]] 
-                    < dists[selected_berth[selected_berthIdx]][pRobut.first][pRobut.second]) { 
-                paths.push_back((Direct)dir); 
-                // logger.log(INFO, formatString("paths size:{},dist:{}", paths.size(),dists[selected_berth[selected_berthIdx]][pRobut.first + dx[dir]][pRobut.second + dy[dir]]));
-                // logger.log(INFO, formatString("selected_berthIdx:{},berth_field[pRobut.first][pRobut.second]:{}", selected_berthIdx,berth_field[pRobut.first][pRobut.second]));
-                if (berth_field[pRobut.first][pRobut.second] == selected_berthIdx) {
-                    // reverse(paths.begin(), paths.end()); // 出栈顺序恢复为路径
+    do
+    {
+        for (int dir : nums)
+        {
+            if (isVaild(pRobut.first, pRobut.second, (Direct)dir) && dists[selected_berth[selected_berthIdx]][pRobut.first + dx[dir]][pRobut.second + dy[dir]] < dists[selected_berth[selected_berthIdx]][pRobut.first][pRobut.second])
+            {
+                // 如果下一步是有效的，且下一步离目标泊位距离更近
+                paths.push_back((Direct)dir); // 机器人移动方向
+                if (berth_field[pRobut.first][pRobut.second] == selected_berthIdx)
+                { // 循环出口：直到机器人进入区域
                     robot.newPath(paths);
                     logger.log(INFO, formatString("find paths size:{}", paths.size()));
                     return;
                 }
-                pRobut.first += dx[dir]; //预测机器人移动后的位置，会在边界后多走几步
+                pRobut.first += dx[dir]; // 在边界后多走一步，避免停留在边界
                 pRobut.second += dy[dir];
-            }   
+            }
         }
-    }while(paths.size() <= max_path);
-    logger.log(ERROR,"BFSPathSearch over max_path");
+    } while (paths.size() <= max_path); // 防止死循环
+    logger.log(ERROR, "BFSPathSearch over max_path");
 }
-void InitRobot() {
-    //初始化机器人信息
+
+/**
+ * @brief 初始化机器人信息并根据一定的标准将机器人分配到泊位。
+ *
+ * 该函数通过识别栅格地图中机器人位置初始化机器人信息。
+ * 然后，它根据特定标准按顺序依次给固定泊位分配剩余机器人中最近的。
+ * 第一轮使用最短距离矩阵来计算每个泊位与机器人之间的最大距离，最大距离大的泊位优先选择一个机器人。
+ * 最后根据每个泊位的运输时间将剩余的机器人分配到泊位。
+ *
+ * @return 一个向量，包含机器人所分配到的泊位的 ID。
+ */
+void InitRobot()
+{
+    // 初始化机器人信息
     {
         int robot_index = 0;
-        for (int x = 0; x < n; x++) { // 观察到机器人是按(x,y)由小到大的顺序返回信息
-            for (int y = 0; y < n; y++) {
-                if (ch[x][y] == 'A') {
+        for (int x = 0; x < n; x++)
+        { // 观察到机器人是按(x,y)由小到大的顺序返回信息
+            for (int y = 0; y < n; y++)
+            {
+                if (ch[x][y] == 'A')
+                {
                     robots[robot_index].x = x;
                     robots[robot_index].y = y;
                     robots[robot_index].goods = 0;
                     robots[robot_index].status = 1;
-                    robot_index++; // TODO 注意数组越界
+                    robot_index++; // TODO 注意数组越界，复赛阶段可以购买机器人
                 }
             }
         }
     }
-   
 
-    // 初始化机器人所属区域
-    // 思路：从dists[berth_num][N][N]获取任意点到任意港口的最短距离，现在希望将10个机器人，对10个机器人分配5个港口
-    // 现在要求用开销小且简洁的代码实现机器人分配到港口，要求每个港口至少有一个机器人，所有机器人移动的总距离最小
-    // 返回值：返回机器人分配的港口的id的vector
-
-    // 计算每个港口到机器人的最大距离,距离最大的港口先分配机器人（控制总移动次数）
-    pair<int, int> max_dist[select_berth_num]; //固定港口id和每个固定港口到机器人的最大距离
-    for (int select_berth_id = 0; select_berth_id < select_berth_num; select_berth_id++) {
+    // 计算每个泊位到机器人的最大距离,距离最大的泊位先分配机器人（控制总移动次数）
+    pair<int, int> max_dist[select_berth_num]; // 固定泊位id和每个固定泊位到机器人的最大距离
+    for (int select_berth_id = 0; select_berth_id < select_berth_num; select_berth_id++)
+    { // 首轮分配，每个泊位按最大距离由大到小依次分配一个机器人
         max_dist[select_berth_id] = make_pair(select_berth_id, 0);
-        for (int robot_id = 0; robot_id < robot_num; robot_id++) {
-            if (dists[selected_berth[select_berth_id]][robots[robot_id].x][robots[robot_id].y] == MAX_LIMIT) { //和BFS默认的不可达距离保持一致
+        for (int robot_id = 0; robot_id < robot_num; robot_id++)
+        { // 每个泊位到所有机器人的最大距离 //TODO 可以极差或标准差衡量
+            if (dists[selected_berth[select_berth_id]][robots[robot_id].x][robots[robot_id].y] == MAX_LIMIT)
+            { // 机器人和泊位位置不可达
                 continue;
             }
             max_dist[select_berth_id].second = max(max_dist[select_berth_id].second, dists[selected_berth[select_berth_id]][robots[robot_id].x][robots[robot_id].y]);
-            // logger.log(formatString("max_dist[select_berth_id].second:{}",max_dist[select_berth_id].second));
         }
     }
-    sort(max_dist, max_dist + select_berth_num, [](pair<int, int> a, pair<int, int> b) {
+    sort(max_dist, max_dist + select_berth_num, [](pair<int, int> a, pair<int, int> b) { // 按照距离由大到小排序
         return a.second > b.second;
     });
-    for (int i = 0; i < select_berth_num; i++) { // 选五个机器人
-        // 港口选择距离最小的机器人
-        int min_dist = INT_MAX;
+    for (int i = 0; i < select_berth_num; i++)
+    { // 每个固定泊位依次选择一个机器人
+        // 泊位选择距离最小的机器人
+        int min_dist = MAX_LIMIT;
         int best_robot_id = -1;
-        for (int j = 0; j < robot_num; j++) { 
-            if (dists[selected_berth[max_dist[i].first]][robots[j].x][robots[j].y] < min_dist
-            && robots[j].path.size() == 0) { // TODO:确认机器人和港口位置不会重叠
+        for (int j = 0; j < robot_num; j++)
+        {
+            if (dists[selected_berth[max_dist[i].first]][robots[j].x][robots[j].y] < min_dist && robots[j].path.size() == 0)
+            { // 保证已分配的机器人不会再次被分配给其他泊位 // TODO:确认机器人和泊位位置不会重叠
                 min_dist = dists[selected_berth[max_dist[i].first]][robots[j].x][robots[j].y];
-                best_robot_id = j;            
+                best_robot_id = j;
             }
         }
-        // logger.log(INFO,formatString("init:robot {} ({},{}) ->berth {} ({},{}):{}", 
-        //     best_robot_id,robots[best_robot_id].x,robots[best_robot_id].y, 
-        //     max_dist[i].first,
-        //     berths[selected_berth[max_dist[i].first]].x,berths[selected_berth[max_dist[i].first]].y,
-        //     dists[selected_berth[max_dist[i].first]][robots[best_robot_id].x][robots[best_robot_id].y]));
-        // 机器人best_robot分配到港口max_dist[i].first
-        BFSPathSearch(best_robot_id, max_dist[i].first,dists[selected_berth[max_dist[i].first]][robots[best_robot_id].x][robots[best_robot_id].y]); //设置机器人初始路径
+        // 设置选定机器人前往对应泊位区域的路径
+        BFSPathSearch(best_robot_id, max_dist[i].first, dists[selected_berth[max_dist[i].first]][robots[best_robot_id].x][robots[best_robot_id].y]); // 设置机器人初始路径
     }
-    // TODO：剩下五个机器人的处理：每个港口按照运输时间由小到大依次分配机器人
-    pair<int,int> berth_trasnport_time[select_berth_num];
-    for (int i = 0; i < select_berth_num; i++) {
+    // 剩余机器人的处理：每个泊位按照运输时间由小到大依次分配机器人
+    pair<int, int> berth_trasnport_time[select_berth_num];
+    for (int i = 0; i < select_berth_num; i++)
+    {
         berth_trasnport_time[i] = make_pair(i, berths[selected_berth[i]].transport_time);
     }
-    sort(berth_trasnport_time, berth_trasnport_time + select_berth_num, [](pair<int, int> a, pair<int, int> b) {
-        return a.second < b.second;
-    });// 排序：按照运输时间由小到大
-    for (int selected_berth_id = 0; selected_berth_id < select_berth_num; selected_berth_id++) {
-        int min_dist = INT_MAX;
+    sort(berth_trasnport_time, berth_trasnport_time + select_berth_num, [](pair<int, int> a, pair<int, int> b)
+         { return a.second < b.second; }); // 排序：按照运输时间由小到大
+    for (int selected_berth_id = 0; selected_berth_id < select_berth_num; selected_berth_id++)
+    {
+        int min_dist = MAX_LIMIT;
         int best_robot_id = -1;
-        for (int robot_id = 0; robot_id < robot_num; robot_id++) {
-            if (dists[selected_berth[berth_trasnport_time[selected_berth_id].first]][robots[robot_id].x][robots[robot_id].y] < min_dist
-            && robots[robot_id].path.size() == 0) {
+        for (int robot_id = 0; robot_id < robot_num; robot_id++)
+        {
+            if (dists[selected_berth[berth_trasnport_time[selected_berth_id].first]][robots[robot_id].x][robots[robot_id].y] < min_dist && robots[robot_id].path.size() == 0)
+            {
                 min_dist = dists[selected_berth[berth_trasnport_time[selected_berth_id].first]][robots[robot_id].x][robots[robot_id].y];
                 best_robot_id = robot_id;
             }
         }
-        // logger.log(INFO,formatString("init:robot {} ({},{})", 
-        //     best_robot_id,robots[best_robot_id].x,robots[best_robot_id].y));
-        // logger.log(INFO,formatString(" ->berth {} ({},{}) :{}",
-        //     berth_trasnport_time[selected_berth_id].first,
-        //     berths[selected_berth[berth_trasnport_time[selected_berth_id].first]].x,berths[selected_berth[berth_trasnport_time[selected_berth_id].first]].y,
-        //     dists[selected_berth[berth_trasnport_time[selected_berth_id].first]][robots[best_robot_id].x][robots[best_robot_id].y]));
-        BFSPathSearch(best_robot_id, berth_trasnport_time[selected_berth_id].first,dists[selected_berth[berth_trasnport_time[selected_berth_id].first]][robots[best_robot_id].x][robots[best_robot_id].y]); //设置机器人初始路径
+        // 设置选定机器人前往对应泊位区域的路径
+        BFSPathSearch(best_robot_id, berth_trasnport_time[selected_berth_id].first, dists[selected_berth[berth_trasnport_time[selected_berth_id].first]][robots[best_robot_id].x][robots[best_robot_id].y]); // 设置机器人初始路径
     }
-
-    
-
-    
-        
-
 }
 
-int nearBerth(Point curPoint) { // TODO:限制寻找区域内货物
+/**
+ * 距离给定点最近的泊位。
+ *
+ * @param curPoint 查找最近泊位的当前点。
+ * @return 根据距离最近的泊位索引。
+ */
+int nearBerth(Point curPoint)
+{ // TODO:限制寻找区域内货物
     int bIdx = 0;
     int minDist = MAX_LIMIT;
-    for (int i: selected_berth) {
+    for (int i : selected_berth)
+    {
         int newDist = dists[i][curPoint.first][curPoint.second];
-        if (newDist < minDist) {
+        if (newDist < minDist)
+        {
             bIdx = i;
             minDist = newDist;
         }
     }
-    return bIdx; //返回对应港口的dist下标
+    return bIdx; // 返回对应泊位的dist下标
 }
 
-int shipBackBerth (int boatId) { 
-    // 选择权重最大的港口，在接近船舶容量的情况，权重= 船舶剩余货物/运送时间
-    //船舶Id用于决定港口货物都小于船舶容量的情况
-    if (boats[boatId].status != 0 && boats[boatId].pos != -1) {
-        return -1; // 船舶不能前往港口
+/**
+ * 为给定船只选择优先度最高的泊位。
+ * 优先度= 船舶剩余货物/运送时间。
+ *
+ * @param BoatId 返回泊位的船的 ID。
+ * @return 所选泊位的 ID，如果船只无法前往任何泊位，则返回 -1。
+ */
+int shipBackBerth(int boatId)
+{
+    // 选择权重最大的泊位，在接近船舶容量的情况，权重= 船舶剩余货物/运送时间
+    // 船舶Id用于决定泊位货物都小于船舶容量的情况
+    if (boats[boatId].status != 0 && boats[boatId].pos != -1)
+    {
+        return -1; // 船舶不能前往泊位
     }
-    int best_berth = selected_berth[boatId]; // 设置默认港口，用于初始船舶位置
-    for (int i = 0; i < boat_num; i++) {
-        if (berths[selected_berth[i]].remain_goods_num > int(boat_capacity * boat_return_weight)) {
-            best_berth = berths[selected_berth[i]].remain_goods_num/berths[selected_berth[i]].transport_time
-            > berths[best_berth].remain_goods_num/berths[best_berth].transport_time ? selected_berth[i] : best_berth;
+    int best_berth = selected_berth[boatId]; // 设置默认泊位，用于初始船舶位置，或所有港口均不接近船舶容量时
+    for (int i = 0; i < boat_num; i++)
+    {
+        if (berths[selected_berth[i]].remain_goods_num > int(boat_capacity * boat_return_weight))
+        { // 泊位货物接近或超过船舶容量
+            // 选择权重最大的泊位
+            best_berth = berths[selected_berth[i]].remain_goods_num / berths[selected_berth[i]].transport_time > berths[best_berth].remain_goods_num / berths[best_berth].transport_time ? selected_berth[i] : best_berth;
         }
     }
     return best_berth;
