@@ -26,11 +26,11 @@ Point pickGood(int bIdx, int zhenId)
         {
             continue;
         }
-        if (gds_flag[gd.first] == true)
+        if (gd.second.marked)
         { // 已经被标记
             continue;
         }
-        int dist = dists[bIdx][gd.first.first][gd.first.second];
+        int dist = getDistByPoint(bIdx, gd.first);
         int newPriority = gd.second.value / dist;
         if (1 * dist + zhenId > gd.second.end_time)
         { // 当前机器人来不及处理该 good //TODO 这个1时什么？
@@ -42,7 +42,7 @@ Point pickGood(int bIdx, int zhenId)
             maxPriority = newPriority;
         }
     }
-    gds_flag[p] = true;
+    gds[p].marked = true;
     return p;
 }
 
@@ -68,7 +68,7 @@ void InitselectBerth()
     priority_queue<pair<int, vector<int>>, vector<pair<int, vector<int>>>, greater<pair<int, vector<int>>>> pq;
     for (int i = 0; i < berth_num; i++)
     { // 初始化，每个泊位都是一个泊位组
-        pq.push({dists[i][berths[i].x][berths[i].y], {i}});
+        pq.push({getDistByBerth(i, berths[i]), {i}});
     }
     while (pq.size() > 5)
     { // 合并泊位组，直到只剩下五个泊位组
@@ -87,7 +87,7 @@ void InitselectBerth()
             {
                 if (i != j)
                 {
-                    min_dist = min(min_dist, dists[j][berths[i].x][berths[i].y]);
+                    min_dist = min(min_dist, getDistByBerth(j, berths[i]));
                 }
             }
         }
@@ -166,11 +166,11 @@ void BFSPathSearch(int robotIdx, int selected_berthIdx, int max_path)
     std::mt19937 g(rd());
     // 打乱数组顺序
     std::shuffle(nums.begin(), nums.end(), g);
-    do
+    while (paths.size() <= max_path) // 防止死循环
     {
         for (int dir : nums)
         {
-            if (isVaild(pRobut.first, pRobut.second, (Direct)dir) && dists[selected_berth[selected_berthIdx]][pRobut.first + dx[dir]][pRobut.second + dy[dir]] < dists[selected_berth[selected_berthIdx]][pRobut.first][pRobut.second])
+            if (isVaild(pRobut.first, pRobut.second, (Direct)dir) && dists[selected_berth[selected_berthIdx]][pRobut.first + dx[dir]][pRobut.second + dy[dir]] < getDistByPoint(selected_berth[selected_berthIdx], pRobut))
             {
                 // 如果下一步是有效的，且下一步离目标泊位距离更近
                 paths.push_back((Direct)dir); // 机器人移动方向
@@ -184,7 +184,7 @@ void BFSPathSearch(int robotIdx, int selected_berthIdx, int max_path)
                 pRobut.second += dy[dir];
             }
         }
-    } while (paths.size() <= max_path); // 防止死循环
+    }
     logger.log(ERROR, "BFSPathSearch over max_path");
 }
 
@@ -226,11 +226,11 @@ void InitRobot()
         max_dist[select_berth_id] = make_pair(select_berth_id, 0);
         for (int robot_id = 0; robot_id < robot_num; robot_id++)
         { // 每个泊位到所有机器人的最大距离 //TODO 可以极差或标准差衡量
-            if (dists[selected_berth[select_berth_id]][robots[robot_id].x][robots[robot_id].y] == MAX_LIMIT)
+            if (getDistByRobot(selected_berth[select_berth_id], robots[robot_id]) == MAX_LIMIT)
             { // 机器人和泊位位置不可达
                 continue;
             }
-            max_dist[select_berth_id].second = max(max_dist[select_berth_id].second, dists[selected_berth[select_berth_id]][robots[robot_id].x][robots[robot_id].y]);
+            max_dist[select_berth_id].second = max(max_dist[select_berth_id].second, getDistByRobot(selected_berth[select_berth_id], robots[robot_id]));
         }
     }
     sort(max_dist, max_dist + select_berth_num, [](pair<int, int> a, pair<int, int> b) { // 按照距离由大到小排序
@@ -243,14 +243,14 @@ void InitRobot()
         int best_robot_id = -1;
         for (int j = 0; j < robot_num; j++)
         {
-            if (dists[selected_berth[max_dist[i].first]][robots[j].x][robots[j].y] < min_dist && robots[j].path.size() == 0)
+            if (getDistByRobot(selected_berth[max_dist[i].first], robots[j]) < min_dist && robots[j].path.size() == 0)
             { // 保证已分配的机器人不会再次被分配给其他泊位 // TODO:确认机器人和泊位位置不会重叠
                 min_dist = dists[selected_berth[max_dist[i].first]][robots[j].x][robots[j].y];
                 best_robot_id = j;
             }
         }
         // 设置选定机器人前往对应泊位区域的路径
-        BFSPathSearch(best_robot_id, max_dist[i].first, dists[selected_berth[max_dist[i].first]][robots[best_robot_id].x][robots[best_robot_id].y]); // 设置机器人初始路径
+        BFSPathSearch(best_robot_id, max_dist[i].first, getDistByRobot(selected_berth[max_dist[i].first], robots[best_robot_id])); // 设置机器人初始路径
     }
     // 剩余机器人的处理：每个泊位按照运输时间由小到大依次分配机器人
     pair<int, int> berth_trasnport_time[select_berth_num];
@@ -266,14 +266,14 @@ void InitRobot()
         int best_robot_id = -1;
         for (int robot_id = 0; robot_id < robot_num; robot_id++)
         {
-            if (dists[selected_berth[berth_trasnport_time[selected_berth_id].first]][robots[robot_id].x][robots[robot_id].y] < min_dist && robots[robot_id].path.size() == 0)
+            if (getDistByRobot(selected_berth[berth_trasnport_time[selected_berth_id].first], robots[robot_id]) < min_dist && robots[robot_id].path.size() == 0)
             {
-                min_dist = dists[selected_berth[berth_trasnport_time[selected_berth_id].first]][robots[robot_id].x][robots[robot_id].y];
+                min_dist = getDistByRobot(selected_berth[berth_trasnport_time[selected_berth_id].first], robots[robot_id]);
                 best_robot_id = robot_id;
             }
         }
         // 设置选定机器人前往对应泊位区域的路径
-        BFSPathSearch(best_robot_id, berth_trasnport_time[selected_berth_id].first, dists[selected_berth[berth_trasnport_time[selected_berth_id].first]][robots[best_robot_id].x][robots[best_robot_id].y]); // 设置机器人初始路径
+        BFSPathSearch(best_robot_id, berth_trasnport_time[selected_berth_id].first, getDistByRobot(selected_berth[berth_trasnport_time[selected_berth_id].first], robots[best_robot_id])); // 设置机器人初始路径
     }
 }
 
@@ -289,7 +289,7 @@ int nearBerth(Point curPoint)
     int minDist = MAX_LIMIT;
     for (int i : selected_berth)
     {
-        int newDist = dists[i][curPoint.first][curPoint.second];
+        int newDist = getDistByPoint(i, curPoint);
         if (newDist < minDist)
         {
             bIdx = i;

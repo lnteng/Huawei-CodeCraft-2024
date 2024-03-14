@@ -69,7 +69,6 @@ int Input()
         scanf("%d%d%d", &x, &y, &val);
         Point point = make_pair(x, y);
         gds[point] = GoodsProperty(val, id); // TODO：计算优先级
-        gds_flag[point] = false;             // 货物是否被机器人标记
     }
     for (int i = 0; i < robot_num; i++)
     { // 机器人状态
@@ -136,7 +135,7 @@ void Output(int zhenId)
         }
         else
         {                                                          // 携带有货物，根据最短距离数组判断返回港口的下一步
-            int berthIdx = nearBerth(make_pair(robot.x, robot.y)); // TODO：根据区域选择泊位最近货物
+            int berthIdx = selected_berth[berth_field[robot.x][robot.y]]; // 根据区域选择泊位最近货物
             Berth &berth = berths[berthIdx];
             vector<int> nums = {0, 1, 2, 3};
             std::random_device rd;
@@ -145,10 +144,10 @@ void Output(int zhenId)
             std::shuffle(nums.begin(), nums.end(), g);
             for (int dir : nums)
             {
-                if (isVaild(robot.x, robot.y, (Direct)dir) && dists[berthIdx][robot.x + dx[dir]][robot.y + dy[dir]] < dists[berthIdx][robot.x][robot.y])
-                { // TODO: bugfix
+                if (isVaild(robot.x, robot.y, (Direct)dir) && dists[berthIdx][robot.x + dx[dir]][robot.y + dy[dir]] < getDistByRobot(berthIdx, robot))
+                {
                     robotMove(robotIdx, (Direct)dir);
-                    if (dists[berthIdx][robot.x][robot.y] == 0)
+                    if (getDistByRobot(berthIdx, robot) == 0)
                     {
                         robotPull(robotIdx);
                         berth.remain_goods_num += 1;

@@ -90,19 +90,19 @@ struct hash_pair {
         return hash1 ^ hash2;
     }
 };
-unordered_map<Point, bool, hash_pair> gds_flag;     // 
 
 struct GoodsProperty // 货物属性
 {
     int value;    // 货物金额，上限200
     int end_time; // 货物消失时间 //TODO：每一帧增加消失货物删除
     int priority; // 机器人拾取优先级
-    // bool gds_flag; // good 是否被 robot 标记，选择货物时使用
+    bool marked; // good 是否被 robot 标记，选择货物时使用
     GoodsProperty() : value(0), end_time(0), priority(0) {}
     GoodsProperty(int value, int start_time)
     {
         this->value = value;
         this->end_time = start_time + thousand; // 出现1000帧后消失
+        this->marked = false;
         this->priority = 0;                     // 0为最低优先级
     }
     void setPriority(int priority)
