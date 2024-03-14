@@ -150,3 +150,12 @@ inline int getDistByRobot(int bIdx, Robot& robot) {
 inline int getDistByBerth(int bIdx, Berth& berth) {
     return dists[bIdx][berth.x][berth.y];
 }
+
+inline void summary(int zhen,int zhenId) { // 总结最后结算信息
+    // 记录港口剩余货物数目
+    for (int i = 0; i < berth_num; i++)
+    {
+        logger.log(INFO, formatString("berth {} :remain_goods_num: {}", i, berths[i].remain_goods_num));
+    }
+    logger.log(INFO, formatString("跳帧:{}", (zhenId-zhen)));
+}

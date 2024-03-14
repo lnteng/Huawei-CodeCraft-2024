@@ -95,7 +95,6 @@ void InitselectBerth()
         pq.push({min_dist, group1.second});
     }
     // 选择每个泊位组的代表泊位
-    logger.log("选择每个泊位组的代表泊位");
     while (!pq.empty())
     {
         auto group = pq.top();
@@ -129,17 +128,17 @@ void InitselectBerth()
             berth_field[i][j] = locateBelongBerth(make_pair(i, j));
         }
     }
-    for (int x = 0; x < n; x++)
-    {
-        std::ostringstream oss;
-        oss << "[";
-        for (int y = 0; y < n; y++)
-        {
-            oss << berth_field[x][y] << "\t";
-        }
-        oss << "]";
-        logger.log(INFO, oss.str());
-    }
+    // for (int x = 0; x < n; x++)
+    // {
+    //     std::ostringstream oss;
+    //     oss << "[";
+    //     for (int y = 0; y < n; y++)
+    //     {
+    //         oss << berth_field[x][y] << "\t";
+    //     }
+    //     oss << "]";
+    //     logger.log(INFO, oss.str());
+    // }
 
     return;
 }

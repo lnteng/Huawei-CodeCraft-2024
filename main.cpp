@@ -86,6 +86,7 @@ int Input()
 void Output(int zhenId)
 {
     // logger.log(INFO, formatString("zhenId: {}", zhenId));
+    // TODO : 机器人碰撞处理
     for (int robotIdx = 0; robotIdx < robot_num; robotIdx++)
     {
         Robot &robot = robots[robotIdx];
@@ -173,6 +174,15 @@ void Output(int zhenId)
         if (boats[i].status == 2)
         { // TODO：船舶状态为 2，添加判定是否已有船舶在泊位上
             logger.log(INFO, formatString("berth {} :boats[{}].status: 1", boats[i].pos, i));
+            for (int boat_id = 0; i < boat_num; i++)
+            { // TODO 是否可以由一个泊位直接跑到另一个泊位
+                if (i!= boat_id && boats[i].pos == boats[boat_id].pos && boats[boat_id].status == 1)
+                { // 仍然由船舶停靠在岸
+                    logger.log(INFO, formatString("berth {} :boats{} waiting", boats[i].pos, i));
+                    continue;
+                }
+            }
+            logger.log(INFO, formatString("berth {} :boats{} reach", boats[i].pos, i));
             boatShip(i, boats[i].pos);
             continue;
         }
@@ -229,7 +239,7 @@ void Output(int zhenId)
 int main()
 {
     Init();
-    printMoreDebugINfo(4);
+    // printMoreDebugINfo(4);
     for (int zhen = 1; zhen <= zhen_total; zhen++)
     {
         int zhenId = Input();
@@ -240,6 +250,11 @@ int main()
         Output(zhenId);
         Ok();
         fflush(stdout);
+        if (zhenId == zhen_total)
+        {
+            summary(zhen,zhenId); // 最后一帧结算信息
+            break;
+        }  
     }
     return 0;
 }
