@@ -8,7 +8,7 @@
 void Init() {
     for (int i = 0; i < n; i++) { // 从 ch[0][0] -> ch[n-1][n-1]
         scanf("%s", ch[i]);
-        logger.log(ch[i]);
+        // logger.log(ch[i]);
     }
     for (int i = 0; i < berth_num; i++) {
         int id;
@@ -19,8 +19,8 @@ void Init() {
     char okk[100];
     scanf("%s", okk);
     getDistByBfs();
-    InitselectBerth();
-    initBelongBerth();
+    InitselectBerth(); // 确定固定港口和初始化地图点位所属泊位区域
+    InitRobot(); //初始化机器人路径，实现固定港口区域分配 //TODO 疑似初始化超时
     Ok();
     fflush(stdout);
 }
@@ -68,16 +68,10 @@ int Input() {
     return id;
 }
 
-bool isVaild(int x, int y, Direct dir) {
-    if (x + dx[dir] < 0 || x + dx[dir] >= n || 
-        y + dy[dir] < 0 || y + dy[dir] >= n) {
-        return false;
-    }
-    return true;
-}
+
 
 void Output(int zhenId) {
-    for (int robotIdx = 0; robotIdx < 1; robotIdx++) {
+    for (int robotIdx = 0; robotIdx < 5; robotIdx++) { //TODO 测试前五个机器人
         Robot& robot = robots[robotIdx]; 
         Point pRobut = make_pair(robot.x, robot.y);
         if (robot.status == 0) { // 碰撞后的恢复状态
@@ -109,7 +103,7 @@ void Output(int zhenId) {
                 robot.incrementPid();
             }
         } else { // 携带有货物
-            int berthIdx = nearBerth(make_pair(robot.x, robot.y));
+            int berthIdx = nearBerth(make_pair(robot.x, robot.y)); //TODO：根据区域选择泊位最近货物
             Berth& berth = berths[berthIdx];
             vector<int> nums = {0, 1, 2, 3};
             std::random_device rd;
@@ -141,12 +135,13 @@ void Output(int zhenId) {
             }
             continue;
         }
-        if (boats[i].status == 2) { // TODO：船舶状态为 1，是否已有船舶在泊位上
-            logger.log(INFO, "boats.status: 1");
+        if (boats[i].status == 2) { // TODO：船舶状态为 2，是否已有船舶在泊位上
+            logger.log(INFO, formatString("berth {} :boats[{}].status: 1",boats[i].pos,i));
+            boatShip(i, boats[i].pos); 
             continue;
         }
         if (boats[i].pos == -1) {
-            int berth_id = selected_berth[shipBackBerth(i)];
+            int berth_id = shipBackBerth(i);
             logger.log(INFO, "boatShip " + to_string(i) + " to " + to_string(berth_id));
             boatShip(i, berth_id); 
             continue;

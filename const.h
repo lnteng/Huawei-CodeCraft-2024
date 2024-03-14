@@ -13,7 +13,7 @@ const int boat_num = 5; // 船只数量
 const int N = 210; 
 const int thousand = 1000; 
 const int Fault_tolerance = 5; // 时间容错，单位：帧，用于船舶最后返航时间的容错
-const int boat_return_weight = 0.8 ; // 港口剩余货物充足的判定，相较于船舶容量
+const double boat_return_weight = 0.8 ; // 港口剩余货物充足的判定，相较于船舶容量
 const int select_berth_num = 5; // 选择的固定港口数量
 
 
@@ -118,3 +118,12 @@ Logger logger("./replay/debug.log");
 // 定义方向
 const int dx[4] = {0, 0, -1, 1};
 const int dy[4] = {1, -1, 0, 0};
+
+// 判断是否越界
+bool isVaild(int x, int y, Direct dir) {
+    if (x + dx[dir] < 0 || x + dx[dir] >= n || 
+        y + dy[dir] < 0 || y + dy[dir] >= n) {
+        return false;
+    }
+    return true;
+}

@@ -10,7 +10,7 @@ chmod +x PreliminaryJudge
 ./PreliminaryJudge ./build/main -m ./maps/map-3.8.txt
 ```
 
-```
+
 ## replayer
 
 ```bash

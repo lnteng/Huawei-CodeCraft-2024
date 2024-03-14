@@ -82,7 +82,100 @@ void InitselectBerth() {
     for (int i = 0; i < 5; i++) { // 或者考虑用指针数组
         selected_berth[i] = res[i]; 
     }
+    // 初始化地图点位所属泊位区域
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            berth_field[i][j] = locateBelongBerth(make_pair(i, j));
+        }
+    }
+    // for (int x = 0; x < n; x++) {
+    //     std::ostringstream oss;
+    //     oss << "[";
+    //     for (int y = 0; y < n; y++) {
+    //         oss << berth_field[x][y] << "\t";
+    //     }
+    //     oss << "]";
+    //     logger.log(INFO, oss.str());
+    // }
+    
     return;
+}
+
+// 初始化机器人所属区域和路径 //TODO 测试
+void BFSPathSearch (int robotIdx, int selected_berthIdx) { // 机器人前往区域路径，进入区域后，机器人会自动选择货物目标
+    Robot& robot = robots[robotIdx]; 
+    Point pRobut = make_pair(robot.x, robot.y); // 模拟机器人位置
+    vector<Direct> paths;
+    vector<int> nums = {0, 1, 2, 3};
+    // 随机数生成器
+    std::random_device rd;
+    std::mt19937 g(rd());
+    // 打乱数组顺序
+    std::shuffle(nums.begin(), nums.end(), g);
+    do{
+        for (int dir: nums) {
+            if (isVaild(pRobut.first, pRobut.second, (Direct)dir) 
+                && dists[selected_berth[selected_berthIdx]][pRobut.first + dx[dir]][pRobut.second + dy[dir]] 
+                    < dists[selected_berth[selected_berthIdx]][pRobut.first][pRobut.second]) { 
+                paths.push_back((Direct)dir); 
+                if (berth_field[pRobut.first][pRobut.second] == selected_berthIdx) {
+                    reverse(paths.begin(), paths.end()); // 出栈顺序恢复为路径
+                    robot.newPath(paths);
+                    // logger.log(INFO, formatString("paths size:{}", paths.size()));
+                    return;
+                }
+                pRobut.first += dx[dir]; //预测机器人移动后的位置，会在边界后多走几步
+                pRobut.second += dy[dir];
+            }   
+        }
+    }while(berth_field[pRobut.first][pRobut.second] == selected_berthIdx);
+    
+    
+
+
+}
+void InitRobot() {
+    // 初始化机器人所属区域
+    // 思路：从dists[berth_num][N][N]获取任意点到任意港口的最短距离，现在希望将10个机器人，对10个机器人分配5个港口
+    // 现在要求用开销小且简洁的代码实现机器人分配到港口，要求每个港口至少有一个机器人，所有机器人移动的总距离最小
+    // 返回值：返回机器人分配的港口的id的vector
+
+    // 计算每个港口到机器人的最大距离,距离最大的港口先分配机器人
+    // 创建pair<int,int>数组存储每个港口到机器人的最大距离
+    pair<int, int> max_dist[select_berth_num];
+    for (int select_berth_id = 0; select_berth_id < select_berth_num; select_berth_id++) {
+        max_dist[select_berth_id] = make_pair(select_berth_id, 0);
+        for (int robot_id = 0; robot_id < robot_num; robot_id++) {
+            if (dists[selected_berth[select_berth_id]][robots[robot_id].x][robots[robot_id].y] == INT16_MAX) { //和BFS默认的不可达距离保持一致
+                continue;
+            }
+            max_dist[select_berth_id].second = max(max_dist[select_berth_id].second, dists[selected_berth[select_berth_id]][robots[robot_id].x][robots[robot_id].y]);
+            logger.log(formatString("max_dist[select_berth_id].second:{}",max_dist[select_berth_id].second));
+        }
+    }
+    sort(max_dist, max_dist + select_berth_num, [](pair<int, int> a, pair<int, int> b) {
+        return a.second > b.second;
+    });
+    for (int i = 0; i < select_berth_num; i++) { // 选五个机器人
+        // 港口选择距离最小的机器人
+        int min_dist = INT_MAX;
+        int best_robot = -1;
+        for (int j = 0; j < robot_num; j++) { 
+            if (dists[selected_berth[max_dist[i].first]][robots[j].x][robots[j].y] < min_dist
+            && robots[j].path.size() == 0) { // TODO:确认机器人和港口位置不会重叠
+                min_dist = dists[selected_berth[max_dist[i].first]][robots[j].x][robots[j].y];
+                best_robot = j;            
+            }
+        }
+        logger.log(INFO,formatString("robot {} ->berth {} :{}", best_robot, max_dist[i].first,dists[selected_berth[max_dist[i].first]][robots[best_robot].x][robots[best_robot].y]));
+        BFSPathSearch(best_robot, max_dist[i].first); //设置机器人初始路径
+    }
+    // TODO：剩下五个机器人的处理，初步考虑就近找船舶
+    
+
+    // 机器人分配到港口
+        
+
 }
 
 int nearBerth(Point curPoint) {
@@ -113,8 +206,5 @@ int shipBackBerth (int boatId) {
     }
     return best_berth;
 }
-
-
-// TODO : 添加物品属性，物品出现的时候确定固定港口id
 
 // TODO 选出区域内的最佳物品，参数需要包含泊位ID和机器人位置

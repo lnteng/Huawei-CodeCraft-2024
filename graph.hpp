@@ -87,20 +87,15 @@ void printMoreDebugINfo() {
 // 定位点属于港口区域
 int locateBelongBerth(Point point) { 
     // 返回值：返回地图点位所属的固定港口区域的id
-    int best_berth_id = 0;
+    int best_selected_berth_id = -1; // 不可达区域
+    if (ch[point.first][point.second] != '.' && ch[point.first][point.second] != 'B' && ch[point.first][point.second] != 'A') {
+        return best_selected_berth_id;
+    }
     for (int i = 1; i < select_berth_num; i++) {
-        best_berth_id = dists[best_berth_id][point.first][point.second] < dists[i][point.first][point.second] ? best_berth_id : i;
+        best_selected_berth_id = dists[selected_berth[best_selected_berth_id]][point.first][point.second] 
+            < dists[selected_berth[i]][point.first][point.second] ? best_selected_berth_id : i;
     }
-    return best_berth_id;
-}
-
-// 初始化地图点位所属泊位区域
-void initBelongBerth() {
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            berth_field[i][j] = locateBelongBerth(make_pair(i, j));
-        }
-    }
+    return best_selected_berth_id;
 }
 
 // 定义节点
