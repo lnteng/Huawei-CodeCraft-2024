@@ -82,23 +82,22 @@ struct Boat // 船舶
     Boat() : num(0) {}
 } boats[10];
 
-struct hash_pair // 自定义哈希函数
-{
-    size_t operator()(const pair<int, int> &p) const
-    {
+// 自定义哈希函数
+struct hash_pair {
+    size_t operator()(const pair<int, int>& p) const {
         auto hash1 = hash<int>{}(p.first);
         auto hash2 = hash<int>{}(p.second);
         return hash1 ^ hash2;
     }
 };
-unordered_map<Point, GoodsProperty, hash_pair> gds; // 货物(坐标->货物属性)
-unordered_map<Point, bool, hash_pair> gds_flag;     // good 是否被 robot 标记，选择货物时使用
+unordered_map<Point, bool, hash_pair> gds_flag;     // 
 
 struct GoodsProperty // 货物属性
 {
     int value;    // 货物金额，上限200
     int end_time; // 货物消失时间 //TODO：每一帧增加消失货物删除
     int priority; // 机器人拾取优先级
+    // bool gds_flag; // good 是否被 robot 标记，选择货物时使用
     GoodsProperty() : value(0), end_time(0), priority(0) {}
     GoodsProperty(int value, int start_time)
     {
@@ -112,6 +111,7 @@ struct GoodsProperty // 货物属性
     }
 };
 
+unordered_map<Point, GoodsProperty, hash_pair> gds; // 货物(坐标->货物属性)
 int money, boat_capacity, id; // boat_capacity:所有船舶容量相同；id:帧ID
 char ch[N][N];                // 地图
 int dists[berth_num][N][N];   // 泊位到各个点的距离
@@ -137,4 +137,16 @@ bool isVaild(int x, int y, Direct dir)
 inline bool isRobotAccessible(int x, int y) // 判断机器人是否可以访问
 {
     return ch[x][y] == '.' || ch[x][y] == 'A' || ch[x][y] == 'B';
+}
+
+inline int getDistByPoint(int bIdx, Point p) {
+    return dists[bIdx][p.first][p.second];
+}
+
+inline int getDistByRobot(int bIdx, Robot& robot) {
+    return dists[bIdx][robot.x][robot.y];
+}
+
+inline int getDistByBerth(int bIdx, Berth& berth) {
+    return dists[bIdx][berth.x][berth.y];
 }
