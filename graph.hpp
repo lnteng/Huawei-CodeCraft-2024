@@ -140,7 +140,8 @@ int locateBelongBerth(Point point)
     best_selected_berth_id = 0;
     for (int i = 1; i < select_berth_num; i++)
     {
-        best_selected_berth_id = dists[selected_berth[best_selected_berth_id]][point.first][point.second] < dists[selected_berth[i]][point.first][point.second] ? best_selected_berth_id : i;
+        best_selected_berth_id = dists[selected_berth[best_selected_berth_id]][point.first][point.second] 
+            < dists[selected_berth[i]][point.first][point.second] ? best_selected_berth_id : i;
     }
     return best_selected_berth_id;
 }

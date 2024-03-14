@@ -95,14 +95,17 @@ void InitselectBerth()
         pq.push({min_dist, group1.second});
     }
     // 选择每个泊位组的代表泊位
+    logger.log("选择每个泊位组的代表泊位");
     while (!pq.empty())
     {
         auto group = pq.top();
         pq.pop();
-        int min_time = MAX_LIMIT;
+        int min_time = INT_MAX;
         int best_berth = -1;
+        logger.log("选择每个泊位组的代表泊位");
         for (int i : group.second)
         {
+            // logger.log(INFO, formatString("berths[i].transport_time:{}", berths[i].transport_time));
             if (berths[i].transport_time < min_time)
             {
                 min_time = berths[i].transport_time;
