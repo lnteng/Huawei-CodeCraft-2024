@@ -50,12 +50,6 @@ struct Robot {
         pid = 0;
         this->path = paths;
     }
-    void newPath() {
-        path.clear();
-        pid = 0;
-        vector<Direct> paths;
-        this->path = paths;
-    }
 } robots[robot_num + 10];
 
 struct Berth {
@@ -77,7 +71,6 @@ int selected_berth[5]; // 选择的固定港口ID
 
 struct Boat {
     int num, pos, status; //num:use for logging the number of goods on boat
-    int zId;
     Boat(): num(0) {}
 } boats[10]; 
 

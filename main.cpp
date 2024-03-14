@@ -137,9 +137,7 @@ void Output(int zhenId) {
     // 处理船舶
     for (int i = 0; i < 5; i++) {
         if (boats[i].status == 0) { // 船舶状态为 0,
-            if (boats[i].num !=0) {
-                boats[i].num =0;
-            }
+            boats[i].num = 0;
             continue;
         }
         if (boats[i].status == 2) { // TODO：船舶状态为 2，是否已有船舶在泊位上

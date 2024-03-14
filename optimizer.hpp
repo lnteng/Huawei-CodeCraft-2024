@@ -249,7 +249,7 @@ int shipBackBerth (int boatId) {
     }
     int best_berth = selected_berth[boatId]; // 设置默认港口，用于初始船舶位置
     for (int i = 0; i < boat_num; i++) {
-        if (berths[selected_berth[i]].remain_goods_num > boat_capacity * boat_return_weight) {
+        if (berths[selected_berth[i]].remain_goods_num > int(boat_capacity * boat_return_weight)) {
             best_berth = berths[selected_berth[i]].remain_goods_num/berths[selected_berth[i]].transport_time
             > berths[best_berth].remain_goods_num/berths[best_berth].transport_time ? selected_berth[i] : best_berth;
         }

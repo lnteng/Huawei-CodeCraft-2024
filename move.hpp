@@ -26,22 +26,18 @@ inline void robotDown(int idx) {
 
 inline void robotGet(int idx) {
     printf("get %d\n", idx);
-    // flag_get=true;
 }
 
 inline void robotPull(int idx) {
     printf("pull %d\n", idx);
-    // flag_get=false;
 }
 
 inline void boatShip(int idb, int ida) {
     printf("ship %d %d\n", idb, ida);
-    ;
 }
 
 inline void boatGo(int idb) {
     printf("go %d\n", idb);
-    ;
 }
 
 inline void Ok() {
