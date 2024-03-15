@@ -31,9 +31,10 @@ Point pickGood(int bIdx, int zhenId)
             continue;
         }
         int dist = getDistByPoint(bIdx, gd.first);
-        int newPriority = gd.second.value / dist;
-        if (1 * dist + zhenId > gd.second.end_time)
-        { // 当前机器人来不及处理该 good //TODO 这个1时什么？
+        // int newPriority = gd.second.value / dist;         // 方案一：货物优先级=货物价值/距离
+        int newPriority = pow(gd.second.value, 2) / dist; // 方案二：货物优先级=货物价值平方/距离
+        if (int(Goods_tolerance * dist) + zhenId > gd.second.end_time)  // 取货物容错系数
+        { // 当前机器人来不及处理该 good 
             continue;
         }
         if (newPriority > maxPriority)
@@ -155,6 +156,7 @@ void InitselectBerth()
  */
 void BFSPathSearch(int robotIdx, int selected_berthIdx, int max_path)
 { // 机器人前往区域路径，进入区域后，机器人会自动选择货物目标
+    logger.log(INFO, formatString("robotIdx:{}, selected_berthIdx[{}]:{}, max_path:{}", robotIdx, selected_berthIdx,selected_berth[selected_berthIdx], max_path));
     Robot &robot = robots[robotIdx];
     Point pRobut = make_pair(robot.x, robot.y); // 模拟机器人位置
     vector<Direct> paths;
@@ -304,9 +306,9 @@ int nearBerth(Point curPoint)
  * @param BoatId 返回泊位的船的 ID。
  * @return 所选泊位的 ID，如果船只无法前往任何泊位，则返回 -1。
  */
-int shipBackBerth(int boatId)
+int shipBackBerth(int boatId) 
 {
-    // 选择权重最大的泊位，在接近船舶容量的情况，权重= 船舶剩余货物/运送时间
+    // 选择权重最大的泊位，在接近船舶容量的情况，权重= 船舶剩余货物/运送时间 // TODO:权重= 船舶剩余货物价值/运送时间 （先保证船舶剩余货物与实际一致？）
     // 船舶Id用于决定泊位货物都小于船舶容量的情况
     if (boats[boatId].status != 0 && boats[boatId].pos != -1)
     {

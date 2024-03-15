@@ -125,7 +125,7 @@ void Output(int zhenId)
                     int berthIdx = selected_berth[berth_field[robot.x][robot.y]];
                     Point pGood = pickGood(berthIdx, zhenId);
                     vector<Direct> paths = AStar(pRobut, pGood); // 计算最短路径
-                    logger.log(formatString("if :{} :robot {},{} ->pickGood: {},{}:{}", zhenId, robot.x, robot.y, pGood.first, pGood.second, paths.size()));
+                    logger.log(formatString("{} :getfail,robot {},{} ->pickGood: {},{}:{}", zhenId, robot.x, robot.y, pGood.first, pGood.second, paths.size()));
                     robot.newPath(paths);
                     continue;
                 }
@@ -206,7 +206,7 @@ void Output(int zhenId)
             boats[i].num += berth.loading_speed;
             if (boats[i].num == boat_capacity)
             { // 船舶装载满
-                logger.log(INFO, "boatGo " + to_string(i));
+                logger.log(INFO, formatString("{}:full boat {} boatGo,berth {} remain: {}", zhenId,i,boats[i].pos,berth.remain_goods_num));
                 boatGo(i);
             }
         }
@@ -218,7 +218,7 @@ void Output(int zhenId)
                 { // 船舶装载满
                     berth.remain_goods_num = boat_capacity - (boat_capacity - boats[i].num);
                     boats[i].num = boat_capacity;
-                    logger.log(INFO, "boatGo " + to_string(i));
+                    logger.log(INFO, formatString("{}:full boat {} boatGo,berth {} remain: {}", zhenId,i,boats[i].pos,berth.remain_goods_num));
                     boatGo(i);
                 }
                 else
@@ -231,7 +231,7 @@ void Output(int zhenId)
             { // 船舶装载完毕或船舶剩余货物未空或临近结束时间
                 if (boats->pos != -1 && (end_flag || boats[i].num == boat_capacity))
                 { // 船舶装载完毕或船舶剩余货物未空
-                    logger.log(INFO, "boatGo " + to_string(i));
+                    logger.log(INFO, formatString("{}:deadline boat {} boatGo,berth {} remain: {}", zhenId,i,boats[i].pos,berth.remain_goods_num));
                     boatGo(i);
                 }
             }
