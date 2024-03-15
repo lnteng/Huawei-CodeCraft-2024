@@ -15,7 +15,7 @@ Point pickGood(int bIdx, int zhenId)
 {
     Point p;
     int maxPriority = 0;
-    for (const auto &gd : gds)
+    for (auto &gd : gds)
     {
         if (selected_berth[locateBelongBerth(gd.first)] != bIdx)
         { // 选择区域内货物
@@ -31,16 +31,17 @@ Point pickGood(int bIdx, int zhenId)
             continue;
         }
         int dist = getDistByPoint(bIdx, gd.first);
-        // int newPriority = gd.second.value / dist;         // 方案一：货物优先级=货物价值/距离
-        int newPriority = pow(gd.second.value, 2) / dist; // 方案二：货物优先级=货物价值平方/距离
         if (int(Goods_tolerance * dist) + zhenId > gd.second.end_time)  // 取货物容错系数
         { // 当前机器人来不及处理该 good 
             continue;
         }
-        if (newPriority > maxPriority)
+        if (gd.second.priority == 0.0) {
+            gd.second.updatePriority(dist);
+        }
+        if (gd.second.priority > maxPriority)
         {
             p = gd.first;
-            maxPriority = newPriority;
+            maxPriority = gd.second.priority;
         }
     }
     gds[p].marked = true;

@@ -18,6 +18,7 @@ const double boat_return_weight = 0.8; // 接近船舶满载权重，用于泊�
 const int select_berth_num = 5;        // 选择的固定泊位数量
 const int MAX_LIMIT = 999;             // 将此距离视为不可达
 
+// #Debug Info
 int robot_recover_count = 0;      // 机器人碰撞恢复总帧数统计
 
 enum Direct // 机器人移动方向
@@ -98,19 +99,20 @@ struct GoodsProperty // 货物属性
 {
     int value;    // 货物金额，上限200
     int end_time; // 货物消失时间 //TODO：每一帧增加消失货物删除
-    int priority; // 机器人拾取优先级
+    double priority; // 机器人拾取优先级
     bool marked; // good 是否被 robot 标记，选择货物时使用
-    GoodsProperty() : value(0), end_time(0), priority(0) {}
+    GoodsProperty() : value(0), end_time(0), priority(0.0) {}
     GoodsProperty(int value, int start_time)
     {
         this->value = value;
         this->end_time = start_time + thousand; // 出现1000帧后消失
         this->marked = false;
-        this->priority = 0;                     // 0为最低优先级
+        this->priority = 0.0;                     // 0为最低优先级
     }
-    void setPriority(int priority)
-    { // TODO: 计算优先级
-        this->priority = priority;
+    void updatePriority(int dist)
+    {
+        // this->priority = value / dist; // 方案一：货物优先级=货物价值/距离
+        this->priority = value * value / dist; // 方案二：货物优先级=货物价值平方/距离
     }
 };
 
@@ -120,7 +122,7 @@ char ch[N][N];                // 地图
 int dists[berth_num][N][N];   // 泊位到各个点的距离
 int berth_field[N][N];        // 属于固定泊位的区域id, 和固定泊位一致，-1表示不可访问区域
 
-Logger logger("./replay/debug.log");
+Logger logger("./results/debug.log");
 
 // 定义方向：右，左，上，下
 const int dx[4] = {0, 0, -1, 1};

@@ -13,10 +13,10 @@ void Init()
     }
     for (int i = 0; i < berth_num; i++)
     {
-        int boat_id; //传入船舶ID，对齐用
-        scanf("%d", &boat_id);
-        scanf("%d%d%d%d", &berths[boat_id].x, &berths[boat_id].y, &berths[boat_id].transport_time, &berths[boat_id].loading_speed);
-        logger.log(INFO, formatString("berth {}: ({},{}),tTime: {},LoadTime: {}",boat_id, berths[boat_id].x, berths[boat_id].y, berths[boat_id].transport_time, berths[id].loading_speed));
+        int berth_id; //传入船舶ID，对齐用
+        scanf("%d", &berth_id);
+        scanf("%d%d%d%d", &berths[berth_id].x, &berths[berth_id].y, &berths[berth_id].transport_time, &berths[berth_id].loading_speed);
+        logger.log(INFO, formatString("berth {}: ({},{}),tTime: {},LoadSpeed: {}",berth_id, berths[berth_id].x, berths[berth_id].y, berths[berth_id].transport_time, berths[berth_id].loading_speed));
     }
     scanf("%d", &boat_capacity);
     logger.log(INFO, formatString("boat_capacity: {}", boat_capacity));
