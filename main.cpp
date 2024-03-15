@@ -69,8 +69,7 @@ int Input()
         int x, y, val; // 货物坐标 货物价值
         scanf("%d%d%d", &x, &y, &val);
         Point point = make_pair(x, y);
-        gds[point] = GoodsProperty(val, id); 
-        // logger.log(INFO, formatString("gds[point]: ({},{}) val: {}",point.first,point.second, gds[point].end_time));
+        gds[point] = GoodsProperty(val, id); // TODO：计算优先级
     }
     for (int i = 0; i < robot_num; i++)
     { // 机器人状态
@@ -147,16 +146,11 @@ void Output(int zhenId)
                     robotMove(robotIdx, (Direct)dir);
                     if (getDistByRobot(berthIdx, robot) == 0)
                     {
-                        robotPull(robotIdx); // TODO
+                        robotPull(robotIdx);
                         berth.remain_goods_num += 1;
                         logger.log(INFO, formatString("{}: pull {},{}", zhenId, robot.x, robot.y));
                         Point pGood = pickGood(berthIdx, zhenId);
-                        if (pGood.first == 0 && pGood.second == 0)
-                        {
-                            logger.log(INFO, formatString("{}: pickGood is empty, robot: {} ", zhenId, robotIdx));
-                            continue;
-                        }
-                        vector<Direct> paths = AStar(make_pair(robot.x, robot.y), pGood);
+                                                vector<Direct> paths = AStar(make_pair(robot.x, robot.y), pGood);
                         logger.log(formatString("{} :robot {},{} ->pickGood: {},{}:{}", zhenId, robot.x, robot.y, pGood.first, pGood.second, paths.size()));
                         robot.newPath(paths);
                     }
