@@ -12,7 +12,7 @@ const int berth_num = 10;     // 泊位数量
 const int boat_num = 5;       // 船只数量
 const int N = 210;            // 初始化地图宽度
 const int thousand = 1000;
-const int Fault_tolerance = 5;         // 时间容错，单位：帧，用于船舶最后返航时间的容错
+const int Fault_tolerance = 500;         // 时间容错，单位：帧，用于船舶最后返航时间的容错
 const double boat_return_weight = 0.8; // 接近船舶满载权重，用于泊位剩余货物充足的判定
 const int select_berth_num = 5;        // 选择的固定泊位数量
 const int MAX_LIMIT = 999;             // 将此距离视为不可达
@@ -60,7 +60,7 @@ struct Berth // 泊位
 {
     int x;
     int y;
-    int transport_time;   // 运输时间
+    int transport_time;   // 运输时间，打印传入时信息在1000帧左右
     int loading_speed;    // 装载速度（个每帧）
     int remain_goods_num; // 剩余货物数量
     Berth() {}

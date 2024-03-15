@@ -13,9 +13,10 @@ void Init()
     }
     for (int i = 0; i < berth_num; i++)
     {
-        int id;
-        scanf("%d", &id);
-        scanf("%d%d%d%d", &berths[id].x, &berths[id].y, &berths[id].transport_time, &berths[id].loading_speed);
+        int boat_id; //传入船舶ID，对齐用
+        scanf("%d", &boat_id);
+        scanf("%d%d%d%d", &berths[boat_id].x, &berths[boat_id].y, &berths[boat_id].transport_time, &berths[boat_id].loading_speed);
+        logger.log(INFO, formatString("berth {}: ({},{}),tTime: {},LoadTime: {}",boat_id, berths[boat_id].x, berths[boat_id].y, berths[boat_id].transport_time, berths[id].loading_speed));
     }
     scanf("%d", &boat_capacity);
     logger.log(INFO, formatString("boat_capacity: {}", boat_capacity));
@@ -112,15 +113,17 @@ void Output(int zhenId)
                         logger.log(ERROR, formatString("{} :gds is empty, robot: {} ", zhenId, robotIdx));
                         continue;
                     }
-                    Point pGood;
-                    int randomIndex = std::rand() % gds.size();
-                    auto it = gds.begin();
-                    std::advance(it, randomIndex++);
-                    pGood = it->first;
-                    if (randomIndex >= gds.size() || randomIndex < 0)
-                    {
-                        continue;
-                    }
+                    // Point pGood;
+                    // int randomIndex = std::rand() % gds.size();
+                    // auto it = gds.begin();
+                    // std::advance(it, randomIndex++);
+                    // pGood = it->first;
+                    // if (randomIndex >= gds.size() || randomIndex < 0)
+                    // {
+                    //     continue;
+                    // }
+                    int berthIdx = selected_berth[berth_field[robot.x][robot.y]];
+                    Point pGood = pickGood(berthIdx, zhenId);
                     vector<Direct> paths = AStar(pRobut, pGood); // 计算最短路径
                     logger.log(formatString("if :{} :robot {},{} ->pickGood: {},{}:{}", zhenId, robot.x, robot.y, pGood.first, pGood.second, paths.size()));
                     robot.newPath(paths);
@@ -253,7 +256,8 @@ int main()
         if (zhenId == zhen_total)
         {
             summary(zhen,zhenId); // 最后一帧结算信息
-            break;
+            zhen = zhenId; //提前结束
+            std::this_thread::sleep_for(std::chrono::seconds(3)); // 等待3秒
         }  
     }
     return 0;

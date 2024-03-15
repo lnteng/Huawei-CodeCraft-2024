@@ -164,6 +164,10 @@ struct Node
  */
 vector<Direct> AStar(Point p1, Point p2)
 {
+    if (!isRobotAccessible(p1.first, p1.second) || !isRobotAccessible(p2.first, p2.second))
+    {
+        return {};
+    }
     // 定义优先队列，按照f值（g+h）从小到大排序
     auto cmp = [](Node &a, Node &b)
     {

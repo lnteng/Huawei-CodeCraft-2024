@@ -101,7 +101,6 @@ void InitselectBerth()
         pq.pop();
         int min_time = INT_MAX;
         int best_berth = -1;
-        logger.log("选择每个泊位组的代表泊位");
         for (int i : group.second)
         {
             // logger.log(INFO, formatString("berths[i].transport_time:{}", berths[i].transport_time));
@@ -176,7 +175,7 @@ void BFSPathSearch(int robotIdx, int selected_berthIdx, int max_path)
                 if (berth_field[pRobut.first][pRobut.second] == selected_berthIdx)
                 { // 循环出口：直到机器人进入区域
                     robot.newPath(paths);
-                    logger.log(INFO, formatString("find paths size:{}", paths.size()));
+                    // logger.log(INFO, formatString("find paths size:{}", paths.size()));
                     return;
                 }
                 pRobut.first += dx[dir]; // 在边界后多走一步，避免停留在边界
