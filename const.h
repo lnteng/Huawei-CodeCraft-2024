@@ -13,10 +13,12 @@ const int boat_num = 5;       // 船只数量
 const int N = 210;            // 初始化地图宽度
 const int thousand = 1000;
 const int Fault_tolerance = 500;       // 时间容错，单位：帧，用于船舶最后返航时间的容错
-const int Goods_tolerance = 0.9;       // 取货物容错系数
+const double Goods_tolerance = 1.1;       // 取货物容错系数,乘以实际最短距离，应该大于1
 const double boat_return_weight = 0.8; // 接近船舶满载权重，用于泊位剩余货物充足的判定
 const int select_berth_num = 5;        // 选择的固定泊位数量
 const int MAX_LIMIT = 999;             // 将此距离视为不可达
+
+int robot_recover_count = 0;      // 机器人碰撞恢复总帧数统计
 
 enum Direct // 机器人移动方向
 {
@@ -158,5 +160,5 @@ inline void summary(int zhen,int zhenId) { // 总结最后结算信息
     {
         logger.log(INFO, formatString("berth {} :remain_goods_num: {}", i, berths[i].remain_goods_num));
     }
-    logger.log(INFO, formatString("跳帧:{}", (zhenId-zhen)));
+    logger.log(INFO, formatString("跳帧:{},机器人恢复状态总帧数:{}", (zhenId-zhen),robot_recover_count));
 }

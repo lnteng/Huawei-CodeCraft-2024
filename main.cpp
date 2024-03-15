@@ -87,6 +87,7 @@ int Input()
 void Output(int zhenId)
 {
     // logger.log(INFO, formatString("zhenId: {}", zhenId));
+    // TODO ：差错检测
     // TODO : 机器人碰撞处理
     for (int robotIdx = 0; robotIdx < robot_num; robotIdx++)
     {
@@ -94,15 +95,16 @@ void Output(int zhenId)
         Point pRobut = make_pair(robot.x, robot.y);
         if (robot.status == 0)
         { // 碰撞后的恢复状态
+            robot_recover_count++;
             continue;
         }
         if (robot.goods == 0)
         { // 未携带货物
             if (!robot.hasPath())
             { // 机器人没有路径或路径已走完
-                if (gds.count(pRobut) > 0)
-                { // 当前位置有货物
-                    robotGet(robotIdx);
+                if (gds.count(pRobut) > 0 ) //&& gds.find(pRobut)->second.end_time < zhenId + dist*Goods_tolerance
+                { // 当前位置有货物且货物没有消失
+                    robotGet(robotIdx); // TODO 差错检测：如果货物已经消失，会影响货物数量和价值统计
                     logger.log(INFO, formatString("{}: get {},{}", zhenId, robot.x, robot.y));
                     gds.erase(pRobut);
                 }
