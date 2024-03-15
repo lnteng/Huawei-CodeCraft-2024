@@ -69,7 +69,8 @@ int Input()
         int x, y, val; // 货物坐标 货物价值
         scanf("%d%d%d", &x, &y, &val);
         Point point = make_pair(x, y);
-        gds[point] = GoodsProperty(val, id); // TODO：计算优先级
+        gds[point] = GoodsProperty(val, id); 
+        // logger.log(INFO, formatString("gds[point]: ({},{}) val: {}",point.first,point.second, gds[point].end_time));
     }
     for (int i = 0; i < robot_num; i++)
     { // 机器人状态
@@ -102,30 +103,21 @@ void Output(int zhenId)
         { // 未携带货物
             if (!robot.hasPath())
             { // 机器人没有路径或路径已走完
-                if (gds.count(pRobut) > 0 ) //&& gds.find(pRobut)->second.end_time < zhenId + dist*Goods_tolerance
+                if (gds.count(pRobut) > 0 && gds.find(pRobut)->second.end_time >= zhenId) // TODO 测试等于时是否会消失
                 { // 当前位置有货物且货物没有消失
                     robotGet(robotIdx); // TODO 差错检测：如果货物已经消失，会影响货物数量和价值统计
                     logger.log(INFO, formatString("{}: get {},{}", zhenId, robot.x, robot.y));
                     gds.erase(pRobut);
                 }
                 else
-                { // 当前位置没有货物, 随机选择一个货物, 并使用A*算法计算最短路径
-                    if (gds.empty())
-                    {
-                        logger.log(ERROR, formatString("{} :gds is empty, robot: {} ", zhenId, robotIdx));
-                        continue;
-                    }
-                    // Point pGood;
-                    // int randomIndex = std::rand() % gds.size();
-                    // auto it = gds.begin();
-                    // std::advance(it, randomIndex++);
-                    // pGood = it->first;
-                    // if (randomIndex >= gds.size() || randomIndex < 0)
-                    // {
-                    //     continue;
-                    // }
+                { // 机器人当前位置没有货物, 则选择本区域优先度最高的一个货物, 并使用A*算法计算最短路径
                     int berthIdx = selected_berth[berth_field[robot.x][robot.y]];
                     Point pGood = pickGood(berthIdx, zhenId);
+                    if (gds.empty()||(pGood.first==0&&pGood.second==0))
+                    {
+                        logger.log(INFO, formatString("{} :gds is empty, robot: {} ", zhenId, robotIdx));
+                        continue;
+                    }
                     vector<Direct> paths = AStar(pRobut, pGood); // 计算最短路径
                     logger.log(formatString("{} :getfail,robot {},{} ->pickGood: {},{}:{}", zhenId, robot.x, robot.y, pGood.first, pGood.second, paths.size()));
                     robot.newPath(paths);
@@ -140,14 +132,14 @@ void Output(int zhenId)
             }
         }
         else
-        {                                                          // 携带有货物，根据最短距离数组判断返回港口的下一步
+        {                                                          // 携带有货物，根据最短距离数组判断返回港口的下一步 //TODO:封装下一步方向
             int berthIdx = selected_berth[berth_field[robot.x][robot.y]]; // 根据区域选择泊位最近货物
             Berth &berth = berths[berthIdx];
             vector<int> nums = {0, 1, 2, 3};
-            std::random_device rd;
+            std::random_device rd;  // TODO 取消随机顺序，改为顺时针或逆时针
             std::mt19937 g(rd());
             // 打乱数组顺序
-            std::shuffle(nums.begin(), nums.end(), g);
+            std::shuffle(nums.begin(), nums.end(), g); 
             for (int dir : nums)
             {
                 if (isVaild(robot.x, robot.y, (Direct)dir) && dists[berthIdx][robot.x + dx[dir]][robot.y + dy[dir]] < getDistByRobot(berthIdx, robot))
@@ -155,10 +147,15 @@ void Output(int zhenId)
                     robotMove(robotIdx, (Direct)dir);
                     if (getDistByRobot(berthIdx, robot) == 0)
                     {
-                        robotPull(robotIdx);
+                        robotPull(robotIdx); // TODO
                         berth.remain_goods_num += 1;
                         logger.log(INFO, formatString("{}: pull {},{}", zhenId, robot.x, robot.y));
                         Point pGood = pickGood(berthIdx, zhenId);
+                        if (pGood.first == 0 && pGood.second == 0)
+                        {
+                            logger.log(INFO, formatString("{}: pickGood is empty, robot: {} ", zhenId, robotIdx));
+                            continue;
+                        }
                         vector<Direct> paths = AStar(make_pair(robot.x, robot.y), pGood);
                         logger.log(formatString("{} :robot {},{} ->pickGood: {},{}:{}", zhenId, robot.x, robot.y, pGood.first, pGood.second, paths.size()));
                         robot.newPath(paths);
@@ -218,7 +215,7 @@ void Output(int zhenId)
             {
                 if (berth.remain_goods_num > boat_capacity - boats[i].num)
                 { // 船舶装载满
-                    berth.remain_goods_num = boat_capacity - (boat_capacity - boats[i].num);
+                    berth.remain_goods_num = berth.remain_goods_num - (boat_capacity - boats[i].num);
                     boats[i].num = boat_capacity;
                     logger.log(INFO, formatString("{}:full boat {} boatGo,berth {} remain: {}", zhenId,i,boats[i].pos,berth.remain_goods_num));
                     boatGo(i);

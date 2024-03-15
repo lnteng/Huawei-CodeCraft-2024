@@ -9,30 +9,43 @@
  *
  * @param bIdx 泊位ID
  * @param zhenId 当前帧数
- * @return 选择的货物坐标
+ * @return 选择的货物坐标,如果没有货物返回boat_virtual_point(200,200)
+ *
  */
 Point pickGood(int bIdx, int zhenId)
 {
-    Point p;
+    Point p = boat_virtual_point;
     int maxPriority = 0;
-    for (auto &gd : gds)
-    {
+    for (auto it = gds.begin(); it != gds.end(); ) {
+        auto &gd = *it;
         if (selected_berth[locateBelongBerth(gd.first)] != bIdx)
         { // 选择区域内货物
+            ++it;
             continue;
         }
-        // good 不需要考虑 good 超时删除问题
-        if (gd.second.end_time < zhenId)
+        // good 不需要考虑 good 超时删除问题 // TODO 为什么？
+        if (gd.second.end_time <= zhenId)
         {
-            continue;
+            if (gd.second.end_time == 0)
+            {
+                logger.log(INFO, formatString("pickGood: good end_time:{} <= zhenId:{}", gd.second.end_time, zhenId));
+                logger.log(ERROR,formatString("good end_time:{} goods {} ", gd.second.end_time, gd.second.value));
+                logger.log(INFO,formatString("gd.x,y{},{}",gd.first.first,gd.first.second));
+            }else{
+                // logger.log(ERROR,formatString("#good end_time:{} goods {} ", gd.second.end_time, gd.second.value));
+                it = gds.erase(it);
+                continue;
+            }
         }
         if (gd.second.marked)
         { // 已经被标记
+            ++it;
             continue;
         }
         int dist = getDistByPoint(bIdx, gd.first);
         if (int(Goods_tolerance * dist) + zhenId > gd.second.end_time)  // 取货物容错系数
         { // 当前机器人来不及处理该 good 
+            ++it;
             continue;
         }
         if (gd.second.priority == 0.0) {
@@ -43,8 +56,12 @@ Point pickGood(int bIdx, int zhenId)
             p = gd.first;
             maxPriority = gd.second.priority;
         }
+        ++it;
     }
-    gds[p].marked = true;
+    if (p != boat_virtual_point)
+    {
+        gds[p].marked = true;
+    }
     return p;
 }
 

@@ -17,6 +17,7 @@ const double Goods_tolerance = 1.1;       // 取货物容错系数,乘以实际�
 const double boat_return_weight = 0.8; // 接近船舶满载权重，用于泊位剩余货物充足的判定
 const int select_berth_num = 5;        // 选择的固定泊位数量
 const int MAX_LIMIT = 999;             // 将此距离视为不可达
+const Point boat_virtual_point = make_pair(200, 200); // 船舶虚拟点/不可达点
 
 // #Debug Info
 int robot_recover_count = 0;      // 机器人碰撞恢复总帧数统计
@@ -27,6 +28,7 @@ enum Direct // 机器人移动方向
     left,
     upper,
     down,
+    pause
 };
 
 struct Robot // 机器人
@@ -44,9 +46,10 @@ struct Robot // 机器人
         y = startY;
         pid = 0;
     }
-    void incrementPid()
+    void incrementPid() //更新pid和下一步方向dir
     {
         ++pid;
+        dir=path[pid];
     }
     bool hasPath() // 路径是否走完
     {
@@ -57,6 +60,7 @@ struct Robot // 机器人
         path.clear();
         pid = 0;
         this->path = paths;
+        dir = path[pid];
     }
 } robots[robot_num + 10];
 
@@ -125,8 +129,8 @@ int berth_field[N][N];        // 属于固定泊位的区域id, 和固定泊位�
 Logger logger("./results/debug.log");
 
 // 定义方向：右，左，上，下
-const int dx[4] = {0, 0, -1, 1};
-const int dy[4] = {1, -1, 0, 0};
+const int dx[5] = {0, 0, -1, 1, 0};
+const int dy[5] = {1, -1, 0, 0, 0};
 
 // 判断是否越界
 bool isVaild(int x, int y, Direct dir)
@@ -141,7 +145,7 @@ bool isVaild(int x, int y, Direct dir)
 
 inline bool isRobotAccessible(int x, int y) // 判断机器人是否可以访问
 {
-    return ch[x][y] == '.' || ch[x][y] == 'A' || ch[x][y] == 'B';
+    return isVaild(x,y,pause) &&(ch[x][y] == '.' || ch[x][y] == 'A' || ch[x][y] == 'B');
 }
 
 inline int getDistByPoint(int bIdx, Point p) {

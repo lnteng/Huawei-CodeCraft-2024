@@ -19,5 +19,3 @@ cd replayer
 chmod +x ./CodeCraft_2024_Replay.x86_64
 ./CodeCraft_2024_Replay.x86_64
 ```
-
-<!-- 问题：前5帧在15ms左右，需要分析原因 -->
