@@ -18,24 +18,15 @@ Point pickGood(int bIdx, int zhenId)
     int maxPriority = 0;
     for (auto it = gds.begin(); it != gds.end(); ) {
         auto &gd = *it;
+        if (gd.second.end_time <= zhenId)
+        { // 删除超时的 good
+            it = gds.erase(it);
+            continue;
+        }
         if (selected_berth[locateBelongBerth(gd.first)] != bIdx)
         { // 选择区域内货物
             ++it;
             continue;
-        }
-        // good 不需要考虑 good 超时删除问题 // TODO 为什么？
-        if (gd.second.end_time <= zhenId)
-        {
-            if (gd.second.end_time == 0)
-            {
-                logger.log(INFO, formatString("pickGood: good end_time:{} <= zhenId:{}", gd.second.end_time, zhenId));
-                logger.log(ERROR,formatString("good end_time:{} goods {} ", gd.second.end_time, gd.second.value));
-                logger.log(INFO,formatString("gd.x,y{},{}",gd.first.first,gd.first.second));
-            }else{
-                // logger.log(ERROR,formatString("#good end_time:{} goods {} ", gd.second.end_time, gd.second.value));
-                it = gds.erase(it);
-                continue;
-            }
         }
         if (gd.second.marked)
         { // 已经被标记
@@ -48,7 +39,8 @@ Point pickGood(int bIdx, int zhenId)
             ++it;
             continue;
         }
-        if (gd.second.priority == 0.0) {
+        if (gd.second.priority == 0.0) 
+        { // 根据既定的策略来更新 good 的优先级
             gd.second.updatePriority(dist);
         }
         if (gd.second.priority > maxPriority)

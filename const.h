@@ -38,18 +38,19 @@ struct Robot // 机器人
     // int mbx, mby;
     vector<Direct> path; // 记录 A* 计算的路径
     int pid;             // 走到第几步
-    int dir;             // 机器人下一步方向 //TODO: 机器人下一步方向
+    int goodValue;       // 携带 good 的 value
     Robot() {}
     Robot(int startX, int startY)
     {
         x = startX;
         y = startY;
         pid = 0;
+        goodValue = 0;
     }
     void incrementPid() //更新pid和下一步方向dir
     {
         ++pid;
-            }
+    }
     bool hasPath() // 路径是否走完
     {
         return pid < path.size();
@@ -59,7 +60,13 @@ struct Robot // 机器人
         path.clear();
         pid = 0;
         this->path = paths;
-            }
+    }
+    void rollBack() // 目前没有使用，使用会出现更多问题
+    {
+        if (pid > 0) {
+            --pid;
+        }
+    }
 } robots[robot_num + 10];
 
 struct Berth // 泊位
@@ -69,6 +76,7 @@ struct Berth // 泊位
     int transport_time;   // 运输时间，打印传入时信息在1000帧左右
     int loading_speed;    // 装载速度（个每帧）
     int remain_goods_num; // 剩余货物数量
+    queue<int> remain_goods_value; // 剩余货物 value
     Berth() {}
     Berth(int x, int y, int transport_time, int loading_speed)
     {
@@ -76,7 +84,14 @@ struct Berth // 泊位
         this->y = y;
         this->transport_time = transport_time;
         this->loading_speed = loading_speed;
-        this->remain_goods_num = 0;
+    }
+    void popRemainGoods(int num)
+    {
+        while (num > 0) 
+        {
+            this->remain_goods_value.pop();
+            --num;
+        }
     }
 } berths[berth_num + 10];
 int selected_berth[5]; // 选择的固定泊位数组，固定泊位seleted_berth_id到泊位id
@@ -162,7 +177,13 @@ inline void summary(int zhen,int zhenId) { // 总结最后结算信息
     // 记录港口剩余货物数目
     for (int i = 0; i < berth_num; i++)
     {
-        logger.log(INFO, formatString("berth {} :remain_goods_num: {}", i, berths[i].remain_goods_num));
+        string remain_goods_values;
+        for (int j = 0; j < 100 && j < berths[i].remain_goods_value.size(); j++)
+        {
+            remain_goods_values += to_string(berths[i].remain_goods_value.front()) + ", ";
+            berths[i].remain_goods_value.pop();
+        }
+        logger.log(INFO, formatString("berth {} :remain_goods_num: {} ", i, berths[i].remain_goods_num) + remain_goods_values);
     }
     logger.log(INFO, formatString("跳帧:{},机器人恢复状态总帧数:{}", (zhenId-zhen),robot_recover_count));
 }

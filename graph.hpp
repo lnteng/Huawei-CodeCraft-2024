@@ -166,7 +166,7 @@ vector<Direct> AStar(Point p1, Point p2)
 {
     if (!isRobotAccessible(p1.first, p1.second) || !isRobotAccessible(p2.first, p2.second))
     {
-        logger.log(WARNING,formatString( "AStar: p1({},{}) or p2({},{}) is not accessible", p1.first, p1.second, p2.first, p2.second)); //该区域没有可获取货物
+        logger.log(WARNING, formatString("AStar: p1({},{}) or p2({},{}) is not accessible", p1.first, p1.second, p2.first, p2.second)); // 该区域没有可获取货物
         return {};
     }
     // 定义优先队列，按照f值（g+h）从小到大排序
@@ -246,5 +246,43 @@ vector<Direct> AStar(Point p1, Point p2)
     }
 
     // 无法到达终点
+    return {};
+}
+
+// A* 算法
+/**
+ * @brief * 算法: 基于 bfs 的结果计算返回指定港口的最短路径。
+ *
+ * @param p1 起点（货物）。
+ * @param p2 目标港口。
+ * @return 表示存放从 p1 到 berthIdx 港口的最短路径的方向向量的路径。
+ * 如果没有路径，则返回空向量，按理不可能为空。
+ */
+vector<Direct> bfsPaths(Point p1, int berthIdx)
+{
+    vector<Direct> paths;
+    Point curPoint = p1;
+
+    // // 打乱数组顺序
+    // vector<int> nums = {0, 1, 2, 3};
+    // std::random_device rd;
+    // std::mt19937 g(rd());
+    // std::shuffle(nums.begin(), nums.end(), g);
+    while (true)
+    {
+        for (int dir = 0; dir < 4; dir++)
+        {
+            if (isVaild(curPoint.first, curPoint.second, (Direct)dir) && dists[berthIdx][curPoint.first + dx[dir]][curPoint.second + dy[dir]] < getDistByPoint(berthIdx, curPoint))
+            {
+                curPoint.first += dx[dir];
+                curPoint.second += dy[dir];
+                paths.push_back((Direct)dir);
+                if (getDistByPoint(berthIdx, curPoint) == 0)
+                {
+                    return paths;
+                }
+            }
+        }
+    }
     return {};
 }

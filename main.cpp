@@ -73,7 +73,13 @@ int Input()
     }
     for (int i = 0; i < robot_num; i++)
     { // 机器人状态
-        scanf("%d%d%d%d", &robots[i].goods, &robots[i].x, &robots[i].y, &robots[i].status);
+        int x, y;
+        scanf("%d%d%d%d", &robots[i].goods, &x, &y, &robots[i].status);
+        if (x != robots[i].x || y != robots[i].y) {
+            robots[i].x = x;
+            robots[i].y = y;
+            logger.log(WARNING, formatString("{} :robot {} failed to move, robot collision", id, i));
+        }
     }
     for (int i = 0; i < 5; i++)
     { // 船状态
@@ -89,6 +95,9 @@ void Output(int zhenId)
     // logger.log(INFO, formatString("zhenId: {}", zhenId));
     // TODO ：差错检测
     // TODO : 机器人碰撞处理
+
+    // vector<int> sortedRobots = avoidCollision();
+    // for (auto robotIdx: sortedRobots)
     for (int robotIdx = 0; robotIdx < robot_num; robotIdx++)
     {
         Robot &robot = robots[robotIdx];
@@ -102,11 +111,16 @@ void Output(int zhenId)
         { // 未携带货物
             if (!robot.hasPath())
             { // 机器人没有路径或路径已走完
-                if (gds.count(pRobut) > 0 && gds.find(pRobut)->second.end_time >= zhenId) // TODO 测试等于时是否会消失
+                if (gds.count(pRobut) > 0 && gds[pRobut].end_time > zhenId) // TODO 测试等于时是否会消失
                 { // 当前位置有货物且货物没有消失
                     robotGet(robotIdx); // TODO 差错检测：如果货物已经消失，会影响货物数量和价值统计
+                    robot.goodValue = gds[pRobut].value;
                     logger.log(INFO, formatString("{}: get {},{}", zhenId, robot.x, robot.y));
                     gds.erase(pRobut);
+                
+                    int berthIdx = selected_berth[berth_field[robot.x][robot.y]];
+                    vector<Direct> paths = bfsPaths(pRobut, berthIdx); // 拿到 good 的同时，规划好回到目标 berth 的路线
+                    robot.newPath(paths);
                 }
                 else
                 { // 机器人当前位置没有货物, 则选择本区域优先度最高的一个货物, 并使用A*算法计算最短路径
@@ -131,36 +145,40 @@ void Output(int zhenId)
             }
         }
         else
-        {                                                          // 携带有货物，根据最短距离数组判断返回港口的下一步 //TODO:封装下一步方向
-            int berthIdx = selected_berth[berth_field[robot.x][robot.y]]; // 根据区域选择泊位最近货物
-            Berth &berth = berths[berthIdx];
-            vector<int> nums = {0, 1, 2, 3};
-            std::random_device rd;  // TODO 取消随机顺序，改为顺时针或逆时针
-            std::mt19937 g(rd());
-            // 打乱数组顺序
-            std::shuffle(nums.begin(), nums.end(), g); 
-            for (int dir : nums)
+        { // 携带有货物，根据最短距离数组判断返回港口的下一步
+            if (!robot.hasPath())
             {
-                if (isVaild(robot.x, robot.y, (Direct)dir) && dists[berthIdx][robot.x + dx[dir]][robot.y + dy[dir]] < getDistByRobot(berthIdx, robot))
+                int berthIdx = selected_berth[berth_field[robot.x][robot.y]]; // 根据区域选择泊位最近货物
+                if (getDistByRobot(berthIdx, robot) != 0)
+                { // TODO 路径走完却没有到达 berth 异常处理
+                    logger.log(WARNING, formatString("{} :paths has been traveled but has not reach berth {}", zhenId, berthIdx));
+                    vector<Direct> paths = bfsPaths(pRobut, berthIdx); // 重新规划好回到目标 berth 的路线
+                    robot.newPath(paths);
+                } 
+                else 
                 {
-                    robotMove(robotIdx, (Direct)dir);
-                    if (getDistByRobot(berthIdx, robot) == 0)
-                    {
-                        robotPull(robotIdx);
-                        berth.remain_goods_num += 1;
-                        logger.log(INFO, formatString("{}: pull {},{}", zhenId, robot.x, robot.y));
-                        Point pGood = pickGood(berthIdx, zhenId);
-                                                vector<Direct> paths = AStar(make_pair(robot.x, robot.y), pGood);
-                        logger.log(formatString("{} :robot {},{} ->pickGood: {},{}:{}", zhenId, robot.x, robot.y, pGood.first, pGood.second, paths.size()));
-                        robot.newPath(paths);
-                    }
+                    Berth &berth = berths[berthIdx];
+                    robotPull(robotIdx);
+                    berth.remain_goods_num += 1;
+                    berth.remain_goods_value.push(robot.goodValue);
+                    logger.log(INFO, formatString("{}: pull {},{}", zhenId, robot.x, robot.y));
+
+                    Point pGood = pickGood(berthIdx, zhenId); // 放下 good 的同时，选择一个新的 good
+                    vector<Direct> paths = AStar(make_pair(robot.x, robot.y), pGood);
+                    logger.log(formatString("{} :robot {},{} ->pickGood: {},{}:{}", zhenId, robot.x, robot.y, pGood.first, pGood.second, paths.size()));
+                    robot.newPath(paths);
                 }
+            }
+            else
+            {
+                robotMove(robotIdx, robot.path[robot.pid]);
+                robot.incrementPid();
             }
         }
     }
 
     // 处理船舶
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < boat_num; i++)
     {
         if (boats[i].status == 0)
         { // 船舶状态为 0,运输中
@@ -170,8 +188,8 @@ void Output(int zhenId)
         if (boats[i].status == 2)
         { // TODO：船舶状态为 2，添加判定是否已有船舶在泊位上
             logger.log(INFO, formatString("berth {} :boats[{}].status: 1", boats[i].pos, i));
-            for (int boat_id = 0; i < boat_num; i++)
-            { // TODO 是否可以由一个泊位直接跑到另一个泊位
+            for (int boat_id = 0; boat_id < boat_num; boat_id++)
+            { // TODO 是否可以由一个泊位直接跑到另一个泊位„
                 if (i!= boat_id && boats[i].pos == boats[boat_id].pos && boats[boat_id].status == 1)
                 { // 仍然由船舶停靠在岸
                     logger.log(INFO, formatString("berth {} :boats{} waiting", boats[i].pos, i));
@@ -196,6 +214,7 @@ void Output(int zhenId)
         {
             // 船舶装载货物空间充足且泊位剩余货物充足且未临近结束时间
             berth.remain_goods_num -= berth.loading_speed;
+            berth.popRemainGoods(berth.loading_speed);
             boats[i].num += berth.loading_speed;
             if (boats[i].num == boat_capacity)
             { // 船舶装载满
@@ -209,7 +228,8 @@ void Output(int zhenId)
             {
                 if (berth.remain_goods_num > boat_capacity - boats[i].num)
                 { // 船舶装载满
-                    berth.remain_goods_num = berth.remain_goods_num - (boat_capacity - boats[i].num);
+                    berth.remain_goods_num -= boat_capacity - boats[i].num;
+                    berth.popRemainGoods(boat_capacity - boats[i].num);
                     boats[i].num = boat_capacity;
                     logger.log(INFO, formatString("{}:full boat {} boatGo,berth {} remain: {}", zhenId,i,boats[i].pos,berth.remain_goods_num));
                     boatGo(i);
@@ -218,6 +238,7 @@ void Output(int zhenId)
                 { // 港口货物装载空
                     boats[i].num += berth.remain_goods_num;
                     berth.remain_goods_num = 0;
+                    berth.popRemainGoods(berth.remain_goods_value.size());
                 }
             }
             else
