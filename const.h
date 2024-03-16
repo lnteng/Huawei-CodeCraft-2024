@@ -49,8 +49,7 @@ struct Robot // 机器人
     void incrementPid() //更新pid和下一步方向dir
     {
         ++pid;
-        dir=path[pid];
-    }
+            }
     bool hasPath() // 路径是否走完
     {
         return pid < path.size();
@@ -60,8 +59,7 @@ struct Robot // 机器人
         path.clear();
         pid = 0;
         this->path = paths;
-        dir = path[pid];
-    }
+            }
 } robots[robot_num + 10];
 
 struct Berth // 泊位
