@@ -9,7 +9,9 @@
 // 机器人性价比
 double priority_robot(Robot robotx)
 {
+    logger.log("priority_robot");
     double priority = 9.9;
+    if ((robotx.path.size() - robotx.pid)== 0) {return 0;}
     priority = robotx.goods / (robotx.path.size() - robotx.pid);
     return priority;
 }
