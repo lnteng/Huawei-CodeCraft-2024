@@ -15,12 +15,28 @@ double priority_robot(Robot robotx)
     priority = robotx.goods / (robotx.path.size() - robotx.pid);
     return priority;
 }
+// 机器人相向运动判断（Direct：left, right, upper, down）
+bool isRobotOpposite(Robot robot1, Robot robot2) // TODO 指针传递，和暂停情况
+{
+    logger.log("isRobotOpposite");
+    if (robot1.path[robot1.pid]+robot2.path[robot2.pid] == 1 || robot1.path[robot1.pid]+robot2.path[robot2.pid] == 5) // 两机器人相向运动
+    {
+        return true;
+    }
+    return false;
+}
+// 机器人换位
+void swapRobot(int robot1, int robot2) 
+{
+    logger.log("swapRobot");
+    // if 
+}
 
 // 通过遍历所有机器人检测与robot1可能相撞的所有情况，为避免碰撞，返回一个新的机器人排序数组sortedRobots[10]
 void collisionAvoid(int robotIdx, vector<int>& sortedRobots)
 {
     Robot &robot1 = robots[robotIdx];
-    for (int i; i < robot_num; i++)
+    for (int i = 0; i < robot_num; i++)
     {
         sortedRobots[i] = i;
     }
@@ -45,6 +61,7 @@ void collisionAvoid(int robotIdx, vector<int>& sortedRobots)
                     sortedRobots[robot2.robotId] = temp_id;
                     robot2.robotId = temp_id;
                     // 暂时两机器人紧挨着且相向移动的情况
+                    logger.log("collisionAvoid robot1.robotId: " + to_string(robot1.robotId) + " robot2.robotId: " + to_string(robot2.robotId));
                 }
             }
             if (robot2.path[robot2.pid] == Direct::right && robot1.y > robot2.y && robot1.x == robot2.x && robot1.robotId > robot2.robotId)

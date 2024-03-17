@@ -153,9 +153,9 @@ struct Node
     Node(int _x, int _y, int _g, int _h) : x(_x), y(_y), g(_g), h(_h) {}
 };
 
-// A* 算法
+
 /**
- * @brief * 算法:执行 A* 算法来查找网格上两点之间的最短路径。
+ * @brief A* 算法:执行 A* 算法来查找网格上两点之间的最短路径。
  *
  * @param p1 起点。
  * @param p2 目标点。
@@ -249,7 +249,6 @@ vector<Direct> AStar(Point p1, Point p2)
     return {};
 }
 
-// A* 算法
 /**
  * @brief * 算法: 基于 bfs 的结果计算返回指定港口的最短路径。
  *

@@ -2,6 +2,8 @@
 #include <bits/stdc++.h>
 #include "logger.hpp"
 
+Logger logger("./results/debug.log");
+
 using namespace std;
 #define Point pair<int, int>
 
@@ -140,7 +142,6 @@ char ch[N][N];                // 地图
 int dists[berth_num][N][N];   // 泊位到各个点的距离
 int berth_field[N][N];        // 属于固定泊位的区域id, 和固定泊位一致，-1表示不可访问区域
 
-Logger logger("./results/debug.log");
 
 // 定义方向：右，左，上，下
 const int dx[5] = {0, 0, -1, 1, 0};
@@ -185,7 +186,7 @@ inline void summary(int zhen,int zhenId) { // 总结最后结算信息
             remain_goods_values += to_string(berths[i].remain_goods_value.front()) + ", ";
             berths[i].remain_goods_value.pop();
         }
-        logger.log(INFO, formatString("berth {} :remain_goods_num: {} ", i, berths[i].remain_goods_num) + remain_goods_values);
+        logger.log(INFO, formatString("berth {} :remain_goods_num: {}, include: ", i, berths[i].remain_goods_num) + remain_goods_values);
     }
     logger.log(INFO, formatString("跳帧:{},机器人恢复状态总帧数:{}", (zhenId-zhen),robot_recover_count));
 }

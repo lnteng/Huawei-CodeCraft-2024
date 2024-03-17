@@ -102,11 +102,11 @@ void Output(int zhenId)
 
     vector<int> sortedRobots;
     sortedRobots.resize(robot_num);
-    for(int robotIdx = 0; robotIdx < robot_num; robotIdx++)
+        for(int robotIdx = 0; robotIdx < robot_num; robotIdx++)
     {
         collisionAvoid(robotIdx,sortedRobots);
     }
-    for (auto robotIdx: sortedRobots)
+        for (auto robotIdx: sortedRobots)
     {
         Robot &robot = robots[robotIdx];
         Point pRobut = make_pair(robot.x, robot.y);
@@ -134,13 +134,13 @@ void Output(int zhenId)
                 { // 机器人当前位置没有货物, 则选择本区域优先度最高的一个货物, 并使用A*算法计算最短路径
                     int berthIdx = selected_berth[berth_field[robot.x][robot.y]];
                     Point pGood = pickGood(berthIdx, zhenId);
-                    if (gds.empty()||(pGood.first==0&&pGood.second==0))
+                    if (gds.empty()||pGood == boat_virtual_point)
                     {
                         logger.log(INFO, formatString("{} :gds is empty, robot: {} ", zhenId, robotIdx));
                         continue;
                     }
                     vector<Direct> paths = AStar(pRobut, pGood); // 计算最短路径
-                    logger.log(formatString("{} :getfail,robot {},{} ->pickGood: {},{}:{}", zhenId, robot.x, robot.y, pGood.first, pGood.second, paths.size()));
+                    logger.log(INFO,formatString("{} :choose goods,robot {},{} ->pickGood: {},{}:{}", zhenId, robot.x, robot.y, pGood.first, pGood.second, paths.size()));
                     robot.newPath(paths);
                     continue;
                 }
@@ -172,6 +172,11 @@ void Output(int zhenId)
                     logger.log(INFO, formatString("{}: pull {},{}", zhenId, robot.x, robot.y));
 
                     Point pGood = pickGood(berthIdx, zhenId); // 放下 good 的同时，选择一个新的 good
+                    if (gds.empty()||pGood == boat_virtual_point)
+                    {
+                        logger.log(INFO, formatString("{} :gds is empty, robot: {} ", zhenId, robotIdx));
+                        continue;
+                    }
                     vector<Direct> paths = AStar(make_pair(robot.x, robot.y), pGood);
                     logger.log(formatString("{} :robot {},{} ->pickGood: {},{}:{}", zhenId, robot.x, robot.y, pGood.first, pGood.second, paths.size()));
                     robot.newPath(paths);

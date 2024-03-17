@@ -187,7 +187,7 @@ void BFSPathSearch(int robotIdx, int selected_berthIdx, int max_path)
                 if (berth_field[pRobut.first][pRobut.second] == selected_berthIdx)
                 { // 循环出口：直到机器人进入区域
                     robot.newPath(paths);
-                    // logger.log(INFO, formatString("find paths size:{}", paths.size()));
+                    logger.log(INFO, formatString("find paths size:{}", paths.size()));
                     return;
                 }
                 pRobut.first += dx[dir]; // 在边界后多走一步，避免停留在边界
