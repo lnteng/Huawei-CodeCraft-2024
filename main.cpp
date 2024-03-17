@@ -4,6 +4,7 @@
 #include "move.hpp"
 #include "graph.hpp"
 #include "optimizer.hpp"
+#include "collisionDetection.hpp"
 
 void Init()
 {
@@ -17,6 +18,9 @@ void Init()
         scanf("%d", &berth_id);
         scanf("%d%d%d%d", &berths[berth_id].x, &berths[berth_id].y, &berths[berth_id].transport_time, &berths[berth_id].loading_speed);
         logger.log(INFO, formatString("berth {}: ({},{}),tTime: {},LoadSpeed: {}",berth_id, berths[berth_id].x, berths[berth_id].y, berths[berth_id].transport_time, berths[berth_id].loading_speed));
+    }
+    for (int i = 0; i < robot_num; i++) {
+        robots[i].robotId = i;
     }
     scanf("%d", &boat_capacity);
     logger.log(INFO, formatString("boat_capacity: {}", boat_capacity));
@@ -96,9 +100,13 @@ void Output(int zhenId)
     // TODO ：差错检测
     // TODO : 机器人碰撞处理
 
-    // vector<int> sortedRobots = avoidCollision();
-    // for (auto robotIdx: sortedRobots)
-    for (int robotIdx = 0; robotIdx < robot_num; robotIdx++)
+    vector<int> sortedRobots;
+    sortedRobots.resize(robot_num);
+    for(int robotIdx = 0; robotIdx < robot_num; robotIdx++)
+    {
+        collisionAvoid(robotIdx,sortedRobots);
+    }
+    for (auto robotIdx: sortedRobots)
     {
         Robot &robot = robots[robotIdx];
         Point pRobut = make_pair(robot.x, robot.y);

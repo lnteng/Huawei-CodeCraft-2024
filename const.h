@@ -33,6 +33,7 @@ enum Direct // 机器人移动方向
 
 struct Robot // 机器人
 {
+    int robotId;
     int x, y, goods; // x,y:坐标 goods:货物数量
     int status;      // 机器人状态 0:恢复中 1:正常运行
     // int mbx, mby;
@@ -178,7 +179,8 @@ inline void summary(int zhen,int zhenId) { // 总结最后结算信息
     for (int i = 0; i < berth_num; i++)
     {
         string remain_goods_values;
-        for (int j = 0; j < 100 && j < berths[i].remain_goods_value.size(); j++)
+        int num = berths[i].remain_goods_value.size();
+        for (int j = 0; j < 100 && j < num; j++)
         {
             remain_goods_values += to_string(berths[i].remain_goods_value.front()) + ", ";
             berths[i].remain_goods_value.pop();
