@@ -285,3 +285,35 @@ vector<Direct> bfsPaths(Point p1, int berthIdx)
     }
     return {};
 }
+
+
+
+/**
+  * 
+  * @brief 判断一个泊位距离为1和2的可达点，用于判断泊位附近是否开阔
+  *
+  * @param x 位置的 x 坐标。
+  * @param y 位置的 y 坐标。
+  * @param berth_id 泊位ID。
+  * @return 如果位置宽敞则为 true，否则为 false。
+  * 
+  * @note 该函数用于初始化固定船舶位置
+  */
+std::pair<int, int> berthSpaciousness(int berth_id) {
+    int reachable1 = 0, reachable2 = 0;
+    for (int dx = -2; dx < 6; ++dx) {
+        for (int dy = -2; dy < 6; ++dy) {
+            int nx = berths[berth_id].x + dx, ny = berths[berth_id].y + dy;
+            if (isVaild(nx,ny,pause) && isRobotAccessible(nx,ny)) {
+                if (dists[berth_id][nx][ny] == 1) {
+                    ++reachable1;
+                } else if (dists[berth_id][nx][ny] == 2)
+                {
+                    ++reachable2;
+                }
+            }
+        }
+    }
+    std::pair<int, int> res = std::make_pair(reachable1, reachable2);
+    return res;
+}

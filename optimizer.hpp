@@ -164,9 +164,22 @@ void InitselectBerth()
         int best_berth = -1;
         for (int j = 0; j < berth_num; j++) {
             if (berth_groups[i][j] == -1) continue;
-            if (berths[j].transport_time < min_transport_time) {
+            pair<int,int> reachable = berthSpaciousness(j);
+            if (reachable.first>=4 && reachable.first<=reachable.second  // 泊位宽敞
+                && berths[j].transport_time < min_transport_time) {
                 min_transport_time = berths[j].transport_time;
                 best_berth = j;
+            }
+        }
+        if (best_berth == -1) { // 该泊位组无宽敞泊位,选择周围最宽阔的泊位
+            best_berth = 0;
+            int spaciousness = 0;
+            for (int j = 0; j < berth_num; j++) {
+                if (berth_groups[i][j] == -1) continue;
+                pair<int,int> reachable = berthSpaciousness(j);
+                if (reachable.first+reachable.second > spaciousness) {
+                    best_berth = j;
+                }
             }
         }
         res.push_back(best_berth);
