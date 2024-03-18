@@ -1,5 +1,6 @@
 #pragma once
 #include "const.h"
+#include "graph.hpp"
 /*
     实现最优化和选择相关的算法：选择泊位、船舶、物品等
 */
@@ -57,17 +58,18 @@ Point pickGood(int bIdx, int zhenId)
     return p;
 }
 
-// 选择泊位
-// 选择固定泊位，在初始化BFS后调用
+
 /**
  * @brief 初始化泊位选择。
  *
  * 该函数根据哈夫曼树方法选择泊位。
  * 首先选择两个最小的泊位并将它们合并到一个新的泊位组中。
- * 这个过程一直持续到只剩下五个泊位组为止。 然后，从每组中选择装载速度最大的泊位。
+ * 这个过程一直持续到只剩下五个泊位组为止。 
+ * 然后，从每组中选择装载速度最大的泊位。 //TODO:选择策略还应该考虑周围的狭窄程度（3.10目前策略仍非最优，因为有两个港口选在单通道处）
  *
  * @return 包含所选泊位 ID 的vector。
  *
+ * @note 选择固定泊位，在初始化BFS后调用
  * @note 全局变量 dists[berth_num][N][N] 记录任一点到泊位 i 的最短距离。
  * @note 全局变量 berths[berth_num + 10] 记录泊位的信息。
  * @note 全局变量 selected_berth[5] 固定泊位seleted_berth_id到泊位id
@@ -75,58 +77,127 @@ Point pickGood(int bIdx, int zhenId)
 void InitselectBerth()
 {
     vector<int> res;
-    // 使用优先队列存储泊位组，队列中的元素是一个pair，第一个元素是泊位组的最小距离，第二个元素是泊位组中的泊位id
-    priority_queue<pair<int, vector<int>>, vector<pair<int, vector<int>>>, greater<pair<int, vector<int>>>> pq;
-    for (int i = 0; i < berth_num; i++)
-    { // 初始化，每个泊位都是一个泊位组
-        pq.push({getDistByBerth(i, berths[i]), {i}});
-    }
-    while (pq.size() > 5)
-    { // 合并泊位组，直到只剩下五个泊位组
-        // 取出距离最小的两个泊位组
-        auto group1 = pq.top();
-        pq.pop();
-        auto group2 = pq.top();
-        pq.pop();
-        // 合并两个泊位组
-        group1.second.insert(group1.second.end(), group2.second.begin(), group2.second.end());
-        // 计算新的泊位组的最小距离
-        int min_dist = MAX_LIMIT;
-        for (int i : group1.second)
+    int berth_dist2[berth_num][berth_num]; // 任意两个泊位之间的欧式距离平方
+    for (int i = 0; i < berth_num; i++) //初始化
+    {
+        for (int j = i;j < berth_num; j++)
         {
-            for (int j : group1.second)
-            {
-                if (i != j)
-                {
-                    min_dist = min(min_dist, getDistByBerth(j, berths[i]));
+            berth_dist2[i][j] = berth_dist2[j][i] = 
+                calcEulerDist2(berths[i].x, berths[i].y, berths[j].x, berths[j].y);
+        }
+    }
+    // for (int i=0 ;i<berth_num;i++){
+    //     std::ostringstream oss;
+    //     oss << "[";
+    //     for (int j=0;j<berth_num;j++){
+    //         oss << berth_dist2[i][j] << "\t";
+    //     }
+    //     oss << "]";
+    //     logger.log(INFO, oss.str());
+    // }
+    int berth_group_num = berth_num; // 泊位组数目
+    int berth_groups[berth_num][berth_num+1]; // 每个泊位组的泊位(最后一列存储该泊位组泊位数目)
+    for (int i = 0; i < berth_num; i++)
+    {
+        berth_groups[i][berth_num] = 1; //初始泊位组i只有一个泊位
+        for (int j = 0; j < berth_num; j++)
+        {
+            berth_groups[i][j] = -1;
+        }
+        berth_groups[i][i] = 1; //泊位组i初始包含第i个泊位
+    }
+    // 循环直到只剩下五个泊位组
+    while(berth_group_num > boat_num){
+        int min_dist2 = INT_MAX;
+        int min_i = -1, min_j = -1;
+        for (int i = 0; i < berth_num; i++) {
+            if (berth_groups[i][berth_num] == 0) continue; // 该泊位组i无泊位
+            for (int j = i + 1; j < berth_num; j++) {
+                if (berth_groups[j][berth_num] == 0) continue; // 该泊位组j无泊位
+                for (int k = 0; k < berth_num; k++) {
+                    if (berth_groups[i][k] == -1) continue;
+                    for (int l = 0; l < berth_num; l++) {
+                        if (berth_groups[j][l] == -1) continue;
+                        if (berth_dist2[k][l] < min_dist2) {
+                            min_dist2 = berth_dist2[k][l]; // k和l是两个泊位
+                            min_i = i;
+                            min_j = j;
+                        }
+                    }
                 }
             }
         }
-        // 将新的泊位组放入队列
-        pq.push({min_dist, group1.second});
+        if (min_i ==-1 || min_j == -1 || min_dist2 == INT_MAX) {
+            logger.log(ERROR, "min_i or min_j error,fail to find min_dist2");
+            logger.log(ERROR, formatString("min_i:{}, min_j:{}, min_dist2:{}", min_i, min_j, min_dist2));
+        }
+        //合并两个泊位组
+        for (int k = 0; k<berth_num; k++) { // 合并泊位组min_j->min_i
+            if (berth_groups[min_j][k] == -1) continue;
+            if (berth_groups[min_j][k] == 1) {
+                berth_groups[min_i][k] = 1;
+                berth_groups[min_j][k] = -1;
+            } else {
+                logger.log(ERROR, formatString("berth_groups{}[{}] error:{}", min_j, k, berth_groups[min_j][k]));
+            }    
+        }
+        berth_groups[min_i][berth_num] += berth_groups[min_j][berth_num];
+        berth_groups[min_j][berth_num] = 0;
+
+        berth_group_num--;
     }
-    // 选择每个泊位组的代表泊位
-    while (!pq.empty())
-    {
-        auto group = pq.top();
-        pq.pop();
-        int min_time = INT_MAX;
+    // 打印
+    // for (int i=0 ;i<berth_num;i++){
+    //     std::ostringstream oss;
+    //     oss << "[";
+    //     for (int j=0;j<berth_num+1;j++){
+    //         oss << berth_groups[i][j] << "\t";
+    //     }
+    //     oss << "]";
+    //     logger.log(INFO, oss.str());
+    // }
+
+    // 从每个泊位组中选择运输时间最短的泊位
+    for (int i = 0; i < berth_num; i++) {
+        if (berth_groups[i][berth_num] == 0) continue; // 该泊位组i无泊位
+        int min_transport_time = INT_MAX;
         int best_berth = -1;
-        for (int i : group.second)
-        {
-            // logger.log(INFO, formatString("berths[i].transport_time:{}", berths[i].transport_time));
-            if (berths[i].transport_time < min_time)
-            {
-                min_time = berths[i].transport_time;
-                best_berth = i;
+        for (int j = 0; j < berth_num; j++) {
+            if (berth_groups[i][j] == -1) continue;
+            if (berths[j].transport_time < min_transport_time) {
+                min_transport_time = berths[j].transport_time;
+                best_berth = j;
             }
         }
-        // TODO 选择最中间的代表泊位或第一帧修改
-        // 将代表泊位的id加入结果
         res.push_back(best_berth);
     }
+    // 检查泊位组是否溢出和数据是否正确
+    if (res.size() != boat_num) {
+        logger.log(ERROR, formatString("res size error:{}", res.size()));
+    }
+    int berth_num_check = 0;
+    for (int i = 0;i<berth_num;i++){
+        if (berth_groups[i][berth_num] != 0) {
+            berth_group_num --;
+        }
+        int count = 0;
+        for (int j = 0; j<berth_num;j++){
+            if (berth_groups[i][j] != -1) count++;
+        }
+        if (count != berth_groups[i][berth_num]) {
+            logger.log(ERROR, formatString("berth_groups{} num count:{} error:{}", i, count, berth_groups[i][berth_num]));
+        }
+        berth_num_check += count;
+    }
+    if (berth_group_num !=0) {
+        logger.log(ERROR, formatString("berth_group_num error:{}", boat_num-berth_group_num));
+    }
+    if (berth_num_check != berth_num) {
+        logger.log(ERROR, formatString("berth_groups-berth_num error:{}", berth_num_check));
+    }
+    
     // 初始化全局变量 selected_berth 固定泊位数组
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < boat_num; i++)
     {
         selected_berth[i] = res[i];
     }
