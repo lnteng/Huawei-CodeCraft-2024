@@ -82,7 +82,16 @@ int Input()
         if (x != robots[i].x || y != robots[i].y) {
             robots[i].x = x;
             robots[i].y = y;
-            logger.log(WARNING, formatString("{} :robot {} failed to move, robot collision", id, i));
+            logger.log(WARNING, formatString("{} :robot {} failed to move, robot collision in ({}, {})", id, i, robots[i].x, robots[i].y));
+            // if (robots[i].pid > 0 && robots[i].pid + 1 < robots[i].path.size()) {
+            //     for (int idx = robots[i].pid - 1; idx <= robots[i].pid + 1; idx++) {
+            //         logger.log(to_string(robots[i].path[idx]));
+            //     }
+            // }
+            // if (!robots[i].hasPath()) {
+            //     logger.log(formatString("has no path {}", robots[i].path[robots[i].pid - 1]));
+            // }
+            // // robots[i].rollBack();
         }
     }
     for (int i = 0; i < 5; i++)
@@ -99,14 +108,8 @@ void Output(int zhenId)
     // logger.log(INFO, formatString("zhenId: {}", zhenId));
     // TODO ：差错检测
     // TODO : 机器人碰撞处理
-
-    vector<int> sortedRobots;
-    sortedRobots.resize(robot_num);
-        for(int robotIdx = 0; robotIdx < robot_num; robotIdx++)
-    {
-        collisionAvoid(robotIdx,sortedRobots);
-    }
-        for (auto robotIdx: sortedRobots)
+    vector<int> sortedRobots = collisionAvoid();
+    for (auto robotIdx: sortedRobots)
     {
         Robot &robot = robots[robotIdx];
         Point pRobut = make_pair(robot.x, robot.y);

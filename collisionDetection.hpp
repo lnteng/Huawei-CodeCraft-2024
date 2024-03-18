@@ -11,209 +11,167 @@ double priority_robot(Robot robotx)
 {
     logger.log("priority_robot");
     double priority = 9.9;
-    if ((robotx.path.size() - robotx.pid)== 0) {return 0;}
+    if ((robotx.path.size() - robotx.pid) == 0)
+    {
+        return 0;
+    }
     priority = robotx.goods / (robotx.path.size() - robotx.pid);
     return priority;
 }
-// 机器人相向运动判断（Direct：left, right, upper, down）
-bool isRobotOpposite(Robot robot1, Robot robot2) // TODO 指针传递，和暂停情况
+
+vector<int> topologicalSort(const vector<pair<int, int>> &priority_order, int num_nodes)
 {
-    logger.log("isRobotOpposite");
-    if (robot1.path[robot1.pid]+robot2.path[robot2.pid] == 1 || robot1.path[robot1.pid]+robot2.path[robot2.pid] == 5) // 两机器人相向运动
+    // 构建邻接表和入度数组
+    vector<int> in_degree(num_nodes, 0);
+    vector<vector<int>> adj_list(num_nodes);
+    for (const auto &edge : priority_order)
     {
-        return true;
+        int from = edge.first;
+        int to = edge.second;
+        adj_list[from].push_back(to);
+        in_degree[to]++;
     }
-    return false;
-}
-// 机器人换位
-void swapRobot(int robot1, int robot2) 
-{
-    logger.log("swapRobot");
-    // if 
+
+    // 使用队列进行拓扑排序
+    queue<int> q;
+    for (int i = 0; i < num_nodes; ++i)
+    {
+        if (in_degree[i] == 0)
+        {
+            q.push(i);
+        }
+    }
+
+    vector<int> sorted_order;
+    while (!q.empty())
+    {
+        int node = q.front();
+        q.pop();
+        sorted_order.push_back(node);
+        for (int neighbor : adj_list[node])
+        {
+            if (--in_degree[neighbor] == 0)
+            {
+                q.push(neighbor);
+            }
+        }
+    }
+
+    // 检查是否有环
+    if (sorted_order.size() != num_nodes)
+    {
+        sorted_order.clear(); // 清空排序结果
+    }
+
+    return sorted_order;
 }
 
 // 通过遍历所有机器人检测与robot1可能相撞的所有情况，为避免碰撞，返回一个新的机器人排序数组sortedRobots[10]
-void collisionAvoid(int robotIdx, vector<int>& sortedRobots)
+vector<int> collisionAvoid()
 {
-    Robot &robot1 = robots[robotIdx];
-    for (int i = 0; i < robot_num; i++)
+    vector<pair<int, int>> priorityOrder;
+    for (int robotIdx1 = 0; robotIdx1 < robot_num; robotIdx1++)
     {
-        sortedRobots[i] = i;
-    }
-    for (int i = 0; i < robot_num; i++)
-    {
-        Robot &robot2 = robots[i];
-        if (calcManhattanDist(robot1.x, robot1.y, robot2.x, robot2.y) == 1)
-        { // 两机器人紧挨着
-            if (robot2.path[robot2.pid] == Direct::left && robot1.y < robot2.y && robot1.x == robot2.x && robot1.robotId > robot2.robotId)
-            {
-                // 碰撞类型：机器人2先左移一格，机器人1下一帧为上下左右任一动作时，均会相撞
+        Robot &robot1 = robots[robotIdx1];
+        for (int robotIdx2 = robotIdx1 + 1; robotIdx2 < robot_num; robotIdx2++)
+        {
+            Robot &robot2 = robots[robotIdx2];
+            // if (!robot1.hasPath()) {
+            //     if (calcManhattanDist(robot1.x, robot1.y, robot2.x, robot2.y) < 2) {
+            //         if (robot2.nextDirect() == Direct::pause) {
+            //             continue;
+            //         }
+            //         logger.log("robot2 insert pause");
+            //         robot2.insertDirect(Direct::pause);
+            //         continue;
+            //     }
+            // }
+            // if (!robot2.hasPath()) {
+            //     if (calcManhattanDist(robot1.x, robot1.y, robot2.x, robot2.y) < 2) {
+            //         if (robot1.nextDirect() == Direct::pause) {
+            //             continue;
+            //         }
+            //         logger.log("robot1 insert pause");
+            //         robot1.insertDirect(Direct::pause);
+            //         continue;
+            //     }
+            // }
+            if (robot1.x + dx[robot1.nextDirect()] == robot2.x + dx[robot2.nextDirect()] && robot1.y + dy[robot1.nextDirect()] == robot2.y + dy[robot2.nextDirect()])
+            { // case 1: 争抢同一个地方，只需要其中之一暂停一步，就会变成 case 2
+                logger.log("case 1");
                 if (priority_robot(robot1) > priority_robot(robot2))
-                { // robot1优先级高，robot2停顿一帧
-                    // robot2.path.erase(robot2.path.begin()+robot2.pid);
-                    robot2.path.insert(robot2.path.begin() + robot2.pid, Direct::pause);
+                {
+                    robot2.insertDirect(Direct::pause);
+                    for (int idx = robot2.pid - 1; idx <= robot2.pid + 1; idx++) {
+                        logger.log(to_string(robot2.path[idx]));
+                    }
                 }
                 else
-                { // robot2优先级高，两个机器人重排序
-                    int temp_id = robot1.robotId;
-                    sortedRobots[robot1.robotId] = robot2.robotId;
-                    robot1.robotId = robot2.robotId;
-                    sortedRobots[robot2.robotId] = temp_id;
-                    robot2.robotId = temp_id;
-                    // 暂时两机器人紧挨着且相向移动的情况
-                    logger.log("collisionAvoid robot1.robotId: " + to_string(robot1.robotId) + " robot2.robotId: " + to_string(robot2.robotId));
+                {
+                    robot1.insertDirect(Direct::pause);
+                    for (int idx = robot1.pid - 1; idx <= robot1.pid + 1; idx++) {
+                        logger.log(to_string(robot1.path[idx]));
+                    }
                 }
             }
-            if (robot2.path[robot2.pid] == Direct::right && robot1.y > robot2.y && robot1.x == robot2.x && robot1.robotId > robot2.robotId)
-            {
-                // 碰撞类型：机器人2先右移一格，机器人1下一帧为上下左右任一动作时，均会相撞
-                if (priority_robot(robot1) > priority_robot(robot2))
-                { // robot1优先级高，robot2停顿一帧
-                    robot2.path.insert(robot2.path.begin() + robot2.pid, Direct::pause);
+            else if (robot1.x + dx[robot1.nextDirect()] == robot2.x && robot1.y + dy[robot1.nextDirect()] == robot2.y)
+            { // case 2: 相邻，默认 robot1 先移动，走到 robot2 当前位置的情况
+                if (robot1.x == robot2.x + dx[robot2.nextDirect()] && robot1.y == robot2.y + dy[robot2.nextDirect()])
+                { // robot2 也想往 robot1 的当前位置移动，也就是相向运动，只能选择一个绕路
+                    if (isRobotAccessible(robot1.x + dx[(robot1.nextDirect() + 2) % 4], robot1.y + dy[(robot1.nextDirect() + 2) % 4]) &&
+                        isRobotAccessible(robot2.x + dx[(robot1.nextDirect() + 2) % 4], robot2.y + dy[(robot1.nextDirect() + 2) % 4]))
+                    { // robot1 行走方向的左侧
+                        if (priority_robot(robot1) > priority_robot(robot2))
+                        { // robot2 绕路
+                            robot2.insertDirect(Direct((robot1.nextDirect() + 3) % 4));
+                            robot2.insertDirect(robot2.nextDirect());
+                            robot2.insertDirect(Direct((robot1.nextDirect() + 2) % 4));
+                        }
+                        else
+                        { // robot1 绕路
+                            robot2.insertDirect(Direct((robot1.nextDirect() + 3) % 4));
+                            robot2.insertDirect(robot1.nextDirect());
+                            robot2.insertDirect(Direct((robot1.nextDirect() + 2) % 4));
+                        }
+                    }
+                    else if (isRobotAccessible(robot2.x + dx[(robot1.nextDirect() + 3) % 4], robot2.y + dy[(robot1.nextDirect() + 3) % 4]) &&
+                             isRobotAccessible(robot2.x + dx[(robot1.nextDirect() + 3) % 4], robot2.y + dy[(robot1.nextDirect() + 3) % 4]))
+                    { // robot1 行走方向的右侧
+                        if (priority_robot(robot1) > priority_robot(robot2))
+                        { // robot2 绕路
+                            robot2.insertDirect(Direct((robot1.nextDirect() + 2) % 4));
+                            robot2.insertDirect(robot2.nextDirect());
+                            robot2.insertDirect(Direct((robot1.nextDirect() + 3) % 4));
+                        }
+                        else
+                        { // robot1 绕路
+                            robot2.insertDirect(Direct((robot1.nextDirect() + 2) % 4));
+                            robot2.insertDirect(robot1.nextDirect());
+                            robot2.insertDirect(Direct((robot1.nextDirect() + 3) % 4));
+                        }
+                    }
+                    else
+                    { // TODO: 无路可走的情况，应该只剩下单通道
+                    }
                 }
                 else
-                { // robot2优先级高，两个机器人重排序
-                    int temp_id = robot1.robotId;
-                    sortedRobots[robot1.robotId] = robot2.robotId;
-                    robot1.robotId = robot2.robotId;
-                    sortedRobots[robot2.robotId] = temp_id;
-                    robot2.robotId = temp_id;
-                    // 暂时两机器人紧挨着且相向移动的情况
-                }
-            }
-            if (robot2.path[robot2.pid] == Direct::upper && robot1.y == robot2.y && robot1.x < robot2.x && robot1.robotId > robot2.robotId)
-            {
-                // 碰撞类型：机器人2先上移一格，机器人1下一帧为上下左右任一动作时，均会相撞
-                if (priority_robot(robot1) > priority_robot(robot2))
-                { // robot1优先级高，robot2停顿一帧
-                    robot2.path.insert(robot2.path.begin() + robot2.pid, Direct::pause);
-                }
-                else
-                { // robot2优先级高，两个机器人重排序
-                    int temp_id = robot1.robotId;
-                    sortedRobots[robot1.robotId] = robot2.robotId;
-                    robot1.robotId = robot2.robotId;
-                    sortedRobots[robot2.robotId] = temp_id;
-                    robot2.robotId = temp_id;
-                    // 暂时两机器人紧挨着且相向移动的情况
-                }
-            }
-            if (robot2.path[robot2.pid] == Direct::down && robot1.y == robot2.y && robot1.x > robot2.x && robot1.robotId > robot2.robotId)
-            {
-                // 碰撞类型：机器人2先下移一格，机器人1下一帧为上下左右任一动作时，均会相撞
-                if (priority_robot(robot1) > priority_robot(robot2))
-                { // robot1优先级高，robot2
-                    robot2.path.insert(robot2.path.begin() + robot2.pid, Direct::pause);
-                }
-                else
-                { // robot2优先级高，两个机器人重排序
-                    int temp_id = robot1.robotId;
-                    sortedRobots[robot1.robotId] = robot2.robotId;
-                    robot1.robotId = robot2.robotId;
-                    sortedRobots[robot2.robotId] = temp_id;
-                    robot2.robotId = temp_id;
-                    // 暂时两机器人紧挨着且相向移动的情况
-                }
-            }
-        }
-        if (calcManhattanDist(robot1.x, robot1.y, robot2.x, robot2.y) == 2)
-        { // 两机器人相距一格或两机器人呈对角
-            if (robot1.path[robot1.pid] == Direct::right && robot2.path[robot2.pid] == Direct::left && robot1.y < robot2.y && robot1.x == robot2.x)
-            {
-                // 碰撞类型:相距一格，横向相对撞
-                if (priority_robot(robot1) > priority_robot(robot2))
-                { // robot1优先级高，robot2停顿两帧，这么处理对不对？
-                    // robot2.path.erase(robot2.path.begin()+robot2.pid);
-                    robot2.path.insert(robot2.path.begin() + robot2.pid, Direct::pause);
-                    robot2.path.insert(robot2.path.begin() + robot2.pid + 1, Direct::pause);
-                }
-                else
-                { // robot2优先级高，robot1停顿两帧
-                    // robot1.path.erase(robot1.path.begin()+robot1.pid);
-                    robot1.path.insert(robot1.path.begin() + robot1.pid, Direct::pause);
-                    robot1.path.insert(robot1.path.begin() + robot1.pid + 1, Direct::pause);
-                }
-            }
-            if (robot1.path[robot1.pid] == Direct::down && robot2.path[robot2.pid] == Direct::upper && robot1.x < robot2.x && robot1.y == robot2.y)
-            {
-                // 碰撞类型：相距一格，纵向相对撞
-                if (priority_robot(robot1) > priority_robot(robot2))
-                { // robot1优先级高，robot2停顿两帧
-                    // robot2.path.erase(robot2.path.begin()+robot2.pid);
-                    robot2.path.insert(robot2.path.begin() + robot2.pid, Direct::pause);
-                    robot2.path.insert(robot2.path.begin() + robot2.pid + 1, Direct::pause);
-                }
-                else
-                { // robot2优先级高，robot1停顿两帧
-                    // robot1.path.erase(robot1.path.begin()+robot1.pid);
-                    robot1.path.insert(robot1.path.begin() + robot1.pid, Direct::pause);
-                    robot1.path.insert(robot1.path.begin() + robot1.pid + 1, Direct::pause);
-                }
-            }
-            if (robot1.path[robot1.pid] == Direct::upper && robot2.path[robot2.pid] == Direct::left && robot1.y < robot2.y && robot1.x > robot2.x)
-            {
-                // 碰撞类型：两机器人对角相撞，左上撞
-                if (priority_robot(robot1) > priority_robot(robot2))
-                { // robot1优先级高，robot2停顿两帧
-                    // robot2.path.erase(robot2.path.begin()+robot2.pid);
-                    robot2.path.insert(robot2.path.begin() + robot2.pid, Direct::pause);
-                    robot2.path.insert(robot2.path.begin() + robot2.pid + 1, Direct::pause);
-                }
-                else
-                { // robot2优先级高，robot1停顿两帧
-                    // robot1.path.erase(robot1.path.begin()+robot1.pid);
-                    robot1.path.insert(robot1.path.begin() + robot1.pid, Direct::pause);
-                    robot1.path.insert(robot1.path.begin() + robot1.pid + 1, Direct::pause);
-                }
-            }
-            if (robot1.path[robot1.pid] == Direct::upper && robot2.path[robot2.pid] == Direct::right && robot1.y > robot2.y && robot1.x > robot2.x)
-            {
-                // 碰撞类型：两机器人对角相撞，右上撞
-                if (priority_robot(robot1) > priority_robot(robot2))
-                { // robot1优先级高，robot2停顿两帧
-                    // robot2.path.erase(robot2.path.begin()+robot2.pid);
-                    robot2.path.insert(robot2.path.begin() + robot2.pid, Direct::pause);
-                    robot2.path.insert(robot2.path.begin() + robot2.pid + 1, Direct::pause);
-                }
-                else
-                { // robot2优先级高，robot1停顿两帧
-                    // robot1.path.erase(robot1.path.begin()+robot1.pid);
-                    robot1.path.insert(robot1.path.begin() + robot1.pid, Direct::pause);
-                    robot1.path.insert(robot1.path.begin() + robot1.pid + 1, Direct::pause);
-                }
-            }
-            if (robot1.path[robot1.pid] == Direct::down && robot2.path[robot2.pid] == Direct::left && robot1.y < robot2.y && robot1.x < robot2.x)
-            {
-                // 碰撞类型：两机器人对角相撞，左下撞
-                if (priority_robot(robot1) > priority_robot(robot2))
-                { // robot1优先级高，robot2停顿两帧
-                    // robot2.path.erase(robot2.path.begin()+robot2.pid);
-                    robot2.path.insert(robot2.path.begin() + robot2.pid, Direct::pause);
-                    robot2.path.insert(robot2.path.begin() + robot2.pid + 1, Direct::pause);
-                }
-                else
-                { // robot2优先级高，robot1停顿两帧
-                    // robot1.path.erase(robot1.path.begin()+robot1.pid);
-                    robot1.path.insert(robot1.path.begin() + robot1.pid, Direct::pause);
-                    robot1.path.insert(robot1.path.begin() + robot1.pid + 1, Direct::pause);
-                }
-            }
-            if (robot1.path[robot1.pid] == Direct::down && robot2.path[robot2.pid] == Direct::right && robot1.y > robot2.y && robot1.x < robot2.x)
-            {
-                // 碰撞类型：两机器人对角相撞，右下撞
-                if (priority_robot(robot1) > priority_robot(robot2))
-                { // robot1优先级高，robot2停顿两帧
-                    // robot2.path.erase(robot2.path.begin()+robot2.pid);
-                    robot2.path.insert(robot2.path.begin() + robot2.pid, Direct::pause);
-                    robot2.path.insert(robot2.path.begin() + robot2.pid + 1, Direct::pause);
-                }
-                else
-                { // robot2优先级高，robot1停顿两帧
-                    // robot1.path.erase(robot1.path.begin()+robot1.pid);
-                    robot1.path.insert(robot1.path.begin() + robot1.pid, Direct::pause);
-                    robot1.path.insert(robot1.path.begin() + robot1.pid + 1, Direct::pause);
+                { // robot2 不会向 robot1 当前位置移动，只需要让 robot2 先走，给 robot1 让路
+                    priorityOrder.push_back(make_pair(robotIdx2, robotIdx1));
                 }
             }
         }
     }
+    vector<int> sortedRobots;
+    if (!priorityOrder.empty())
+    {
+        sortedRobots = topologicalSort(priorityOrder, robot_num);
+    }
+    else
+    {
+        for (int i = 0; i < robot_num; i++)
+        {
+            sortedRobots.push_back(i);
+        }
+    }
+    return sortedRobots;
 }
