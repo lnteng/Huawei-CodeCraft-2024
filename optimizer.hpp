@@ -391,7 +391,8 @@ void InitRobot()
         // 设置选定机器人前往对应泊位区域的路径
         BFSPathSearch(best_robot_id, max_dist[i].first, getDistByRobot(selected_berth[max_dist[i].first], robots[best_robot_id])); // 设置机器人初始路径
     }
-    // // 剩余机器人的处理1：每个泊位按照运输时间由小到大依次分配机器人
+    logger.log(INFO, "InitRobot part 1 over");
+    // 剩余机器人的处理1：每个泊位按照运输时间由小到大依次分配机器人
     // pair<int, int> berth_trasnport_time[select_berth_num];
     // for (int i = 0; i < select_berth_num; i++)
     // {
@@ -414,7 +415,6 @@ void InitRobot()
     //     // 设置选定机器人前往对应泊位区域的路径
     //     BFSPathSearch(best_robot_id, berth_trasnport_time[selected_berth_id].first, getDistByRobot(selected_berth[berth_trasnport_time[selected_berth_id].first], robots[best_robot_id])); // 设置机器人初始路径
     // }
-    logger.log(INFO, "InitRobot part 1 over");
     // TODO 考虑初始路径长度的因素
     // 剩余机器人的处理2：每个固定泊位按照辐射可达点面积按比例分配机器人
     struct Compare
@@ -424,27 +424,27 @@ void InitRobot()
             return a.second < b.second;
         }
     };
-    priority_queue<pair<int, int>, vector<pair<int, int>>, Compare> berth_field_count_sort; // 创建优先队列
+    priority_queue<pair<int, int>, vector<pair<int, int>>, Compare> berth_field_count_sort; // 创建优先队列(固定泊位id和辐射面积)
     for (int i = 0; i < select_berth_num; i++)
     {
         berth_field_count_sort.push(make_pair(i, berth_field_count[i]));
     }
     int part = reachable_point_count / (robot_num-boat_num); // 剩余每个机器人对应的辐射可达点数目，向下取整
-    for (int i = 0; i < boat_num;i++){
-        int allocated_robot_num = berth_field_count[i] / part; // 每个泊位分配的机器人数目,向下取整
-        if (allocated_robot_num == 0) {
-            allocated_robot_num = 1; // 不足一个机器人向上取整，至多再分配一个机器人
-        }
-        logger.log(INFO, formatString("allocated_robot_num[{}]:{}", i, allocated_robot_num));
+    // int part = reachable_point_count / robot_num; //十个一起分配使用
+    while (!berth_field_count_sort.empty()) {
+        pair<int, int> top = berth_field_count_sort.top();
+        berth_field_count_sort.pop();
+        int allocated_robot_num = std::floor(static_cast<double>(berth_field_count[top.first]) / part + 0.5); // 每个泊位分配的机器人数目,四舍五入
+        logger.log(INFO, formatString("allocated_robot_num[{}]:{}", top.first, allocated_robot_num));
         for (int j = 0; j < allocated_robot_num; j++)
         { // 每个泊位依次选择最近的机器人
             int min_dist = MAX_LIMIT;
             int best_robot_id = -1;
             for (int robot_id = 0; robot_id < robot_num; robot_id++)
-            {
-                if (robots[robot_id].path.size() == 0 && getDistByRobot(selected_berth[i], robots[robot_id]) < min_dist)
+            { 
+                if (robots[robot_id].path.size() == 0 && getDistByRobot(selected_berth[top.first], robots[robot_id]) < min_dist)
                 {
-                    min_dist = getDistByRobot(selected_berth[i], robots[robot_id]);
+                    min_dist = getDistByRobot(selected_berth[top.first], robots[robot_id]);
                     best_robot_id = robot_id;
                 }
             }
@@ -453,7 +453,7 @@ void InitRobot()
                 break; 
             }
             // 设置选定机器人前往对应泊位区域的路径
-            BFSPathSearch(best_robot_id, i, getDistByRobot(selected_berth[i], robots[best_robot_id])); // 设置机器人初始路径
+            BFSPathSearch(best_robot_id, top.first, getDistByRobot(selected_berth[top.first], robots[best_robot_id])); // 设置机器人初始路径
         }
 
     }
