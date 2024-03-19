@@ -170,6 +170,11 @@ vector<Direct> AStar(Point p1, Point p2,int version=0)
         logger.log(WARNING, formatString("AStar: p1({},{}) or p2({},{}) is not accessible", p1.first, p1.second, p2.first, p2.second)); // 该区域没有可获取货物
         return {};
     }
+    if (version != 0 && version != 1)
+    {
+        logger.log(WARNING, formatString("AStar: version({}) is not valid", version)); // 该区域没有可获取货物
+        return AStar(p1, p2, 0); // 默认使用普通A*算法
+    }
     // 定义优先队列，按照f值（g+h）从小到大排序
     auto cmp = [](Node &a, Node &b)
     {
@@ -240,19 +245,15 @@ vector<Direct> AStar(Point p1, Point p2,int version=0)
             {
                 visited[nx][ny] = true;
                 parent[nx][ny] = {cur.x, cur.y};
-                if (version == 0) {
-                    Node next(nx, ny, cur.g + 1, calcManhattanDist(nx, ny, p2.first, p2.second));
-                    heap.push(next);
-                }else if (version == 1 && congestion[nx][ny].first >= High_congestion)
+                if (version == 1 && congestion[nx][ny].first >= High_congestion)
                 {
                     int extra_cost = high_congestion_cost; // 高拥堵度代价
                     Node next(nx, ny, cur.g + 1 + extra_cost, calcManhattanDist(nx, ny, p2.first, p2.second));
                     heap.push(next);
-                }else{
-                    logger.log(ERROR, "AStar: version is not supported");
-                    return AStar(p1, p2, 0); //使用默认版本
-                }
-                
+                }else {
+                    Node next(nx, ny, cur.g + 1, calcManhattanDist(nx, ny, p2.first, p2.second));
+                    heap.push(next);
+                }                
             }
         }
     }

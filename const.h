@@ -14,7 +14,7 @@ const int berth_num = 10;     // 泊位数量
 const int boat_num = 5;       // 船只数量
 const int N = 210;            // 初始化地图宽度
 const int thousand = 1000;
-const int Fault_tolerance = 500;       // 时间容错，单位：帧，用于船舶最后返航时间的容错
+const int Fault_tolerance = 5;       // 时间容错，单位：帧，用于船舶最后返航时间的容错
 const double Goods_tolerance = 1.1;       // 取货物容错系数,乘以实际最短距离，应该大于1
 const double boat_return_weight = 0.8; // 接近船舶满载权重，用于泊位剩余货物充足的判定
 const int select_berth_num = 5;        // 选择的固定泊位数量
@@ -38,6 +38,8 @@ enum Direct // 机器人移动方向
 
 int extra_steps2avoid_collision = 0; // 碰撞避免额外走的路程
 int expected_scores = 0;    // 预期得分，与实际得分进行对比
+int boat_berthing_time_count[berth_num] = {0}; // 统计:船舶靠泊时间
+int without_goods_time_count[berth_num] = {0}; // 统计:固定泊位区域无货物的帧数*机器人数
 
 struct Robot // 机器人
 {
@@ -151,9 +153,10 @@ struct GoodsProperty // 货物属性
         this->priority = 0.0;                     // 0为最低优先级
     }
     void updatePriority(int dist)
-    {
+    { // 二次方左右差别不大
         // this->priority = value / dist; // 方案一：货物优先级=货物价值/距离
         this->priority = value * value / dist; // 方案二：货物优先级=货物价值平方/距离
+        // this->priority = pow(value, 2.5) /dist;// 方案三：货物优先级=货物价值1.5次方/距离
     }
 };
 
@@ -213,6 +216,21 @@ inline void summary(int zhen,int zhenId) { // 总结最后结算信息
         }
         logger.log(INFO, formatString("berth {} :remain_goods_num: {}, include: ", i, berths[i].remain_goods_num) + remain_goods_values);
     }
+    logger.log(INFO, formatString("跳帧:{},机器人恢复状态总帧数:{}", (zhenId-zhen),robot_recover_count));
     logger.log(INFO, formatString("碰撞避免额外走的路程:{}", extra_steps2avoid_collision));
     logger.log(INFO, formatString("预期得分:{}", expected_scores));
+    logger.log(INFO,"船舶靠泊时间统计:");
+    for (int i=0;i<berth_num;i++) { // TODO：复赛时需要评估船舶瓶颈时细化到每次往返在泊位停靠时间
+        logger.log(INFO, formatString("  berth {} :boat berthing_time: {}", i, boat_berthing_time_count[i]));
+    }
+    logger.log(INFO,"泊位区域无货物的帧数（*机器人数）统计:");
+    for (int i=0;i<berth_num;i++) {
+        if (without_goods_time_count[i] == 0) continue;
+        logger.log(INFO, formatString("  Berth {} :without_goods_time: {}", i, without_goods_time_count[i]));
+    }
+    logger.log(INFO, formatString("固定泊位辐射面积统计:{}", reachable_point_count)); 
+    for (int i=0;i<boat_num;i++) {
+        logger.log(INFO, formatString("  selectedBerth {} :berth_field_count: {}", i, berth_field_count[i]));
+    }
+    logger.log(INFO, "summary end");
 }

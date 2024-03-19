@@ -184,6 +184,7 @@ void InitselectBerth()
         }
         res.push_back(best_berth);
     }
+    // res = {0,5,6,7,8}; // TODO:测试用例
     // 检查泊位组是否溢出和数据是否正确
     if (res.size() != boat_num) {
         logger.log(ERROR, formatString("res size error:{}", res.size()));
@@ -272,6 +273,11 @@ void InitselectBerth()
     //     oss << "]";
     //     logger.log(INFO, oss.str());
     // }
+    for (int i = 0; i < boat_num; i++)
+    {
+        logger.log(INFO, formatString("berth_field_count[{}]:{}", i, berth_field_count[i]));
+    }
+    logger.log(INFO, formatString("reachable_point_count:{}", reachable_point_count));
 
     return;
 }
@@ -355,7 +361,7 @@ void InitRobot()
     // 计算每个泊位到机器人的最大距离,距离最大的泊位先分配机器人（控制总移动次数）
     pair<int, int> max_dist[select_berth_num]; // 固定泊位id和每个固定泊位到机器人的最大距离
     for (int select_berth_id = 0; select_berth_id < select_berth_num; select_berth_id++)
-    { // 首轮分配，每个泊位按最大距离由大到小依次分配一个机器人
+    { // 首轮分配，每个泊位按最大距离由大到小依次分配一个机器人 // TODO:比较直接使用次轮分类策略2
         max_dist[select_berth_id] = make_pair(select_berth_id, 0);
         for (int robot_id = 0; robot_id < robot_num; robot_id++)
         { // 每个泊位到所有机器人的最大距离 //TODO 可以极差或标准差衡量
@@ -408,8 +414,9 @@ void InitRobot()
     //     // 设置选定机器人前往对应泊位区域的路径
     //     BFSPathSearch(best_robot_id, berth_trasnport_time[selected_berth_id].first, getDistByRobot(selected_berth[berth_trasnport_time[selected_berth_id].first], robots[best_robot_id])); // 设置机器人初始路径
     // }
+    logger.log(INFO, "InitRobot part 1 over");
+    // TODO 考虑初始路径长度的因素
     // 剩余机器人的处理2：每个固定泊位按照辐射可达点面积按比例分配机器人
-
     struct Compare
     { // 自定义比较函数，让优先队列按照 pair 的第二个元素从大到小排序
         bool operator()(const pair<int, int> &a, const pair<int, int> &b)
@@ -425,6 +432,10 @@ void InitRobot()
     int part = reachable_point_count / (robot_num-boat_num); // 剩余每个机器人对应的辐射可达点数目，向下取整
     for (int i = 0; i < boat_num;i++){
         int allocated_robot_num = berth_field_count[i] / part; // 每个泊位分配的机器人数目,向下取整
+        if (allocated_robot_num == 0) {
+            allocated_robot_num = 1; // 不足一个机器人向上取整，至多再分配一个机器人
+        }
+        logger.log(INFO, formatString("allocated_robot_num[{}]:{}", i, allocated_robot_num));
         for (int j = 0; j < allocated_robot_num; j++)
         { // 每个泊位依次选择最近的机器人
             int min_dist = MAX_LIMIT;
@@ -439,13 +450,14 @@ void InitRobot()
             }
             if (best_robot_id == -1) {
                 logger.log(INFO, "robot is all allocated");
-                return; 
+                break; 
             }
             // 设置选定机器人前往对应泊位区域的路径
             BFSPathSearch(best_robot_id, i, getDistByRobot(selected_berth[i], robots[best_robot_id])); // 设置机器人初始路径
         }
 
     }
+    logger.log(INFO, "InitRobot part 2 over");
     return;
 }
 

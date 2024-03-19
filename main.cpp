@@ -140,6 +140,7 @@ void Output(int zhenId)
                     if (gds.empty()||pGood == boat_virtual_point)
                     {
                         logger.log(INFO, formatString("{} :without gds,gds is empty, robot: {} ", zhenId, robotIdx));
+                        without_goods_time_count[berthIdx]++; // 统计泊位区域无货物的帧数*机器人数
                         continue;
                     }
                     vector<Direct> paths = AStar(pRobut, pGood,1); // 计算最短路径
@@ -178,6 +179,7 @@ void Output(int zhenId)
                     if (gds.empty()||pGood == boat_virtual_point)
                     {
                         logger.log(INFO, formatString("{} :after pulling,gds is empty, robot: {} ", zhenId, robotIdx));
+                        without_goods_time_count[berthIdx]++; // 统计泊位区域无货物的帧数*机器人数
                         continue;
                     }
                     vector<Direct> paths = AStar(make_pair(robot.x, robot.y), pGood,1);
@@ -224,6 +226,8 @@ void Output(int zhenId)
             continue;
         }
         Berth &berth = berths[boats[i].pos];
+        // 统计在泊位停靠的时间
+        boat_berthing_time_count[boats[i].pos]++;
         // 注意避免重复指令导致刷新运送时间
         bool end_flag = (berth.transport_time + zhenId + Fault_tolerance > zhen_total);
         if (berth.remain_goods_num >= berth.loading_speed && !end_flag && boats[i].num + berth.loading_speed <= boat_capacity)
