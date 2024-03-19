@@ -79,18 +79,18 @@ int Input()
     { // 机器人状态
         int x, y;
         scanf("%d%d%d%d", &robots[i].goods, &x, &y, &robots[i].status);
-        if (x != robots[i].x || y != robots[i].y) {
+        if (x != robots[i].x || y != robots[i].y || robots[i].status == 0) {
             robots[i].x = x;
             robots[i].y = y;
             logger.log(WARNING, formatString("{} :robot {} failed to move, robot collision in ({}, {})", id, i, robots[i].x, robots[i].y));
-            // if (robots[i].pid > 0 && robots[i].pid + 1 < robots[i].path.size()) {
-            //     for (int idx = robots[i].pid - 1; idx <= robots[i].pid + 1; idx++) {
-            //         logger.log(to_string(robots[i].path[idx]));
-            //     }
-            // }
-            // if (!robots[i].hasPath()) {
-            //     logger.log(formatString("has no path {}", robots[i].path[robots[i].pid - 1]));
-            // }
+            if (robots[i].pid > 0 && robots[i].pid + 1 < robots[i].path.size()) {
+                for (int idx = robots[i].pid - 1; idx <= robots[i].pid + 1; idx++) {
+                    logger.log(to_string(robots[i].path[idx]));
+                }
+            }
+            if (!robots[i].hasPath()) {
+                logger.log(formatString("has no path {}", robots[i].path[robots[i].pid - 1]));
+            }
             // // robots[i].rollBack();
         }
     }
@@ -139,7 +139,7 @@ void Output(int zhenId)
                     Point pGood = pickGood(berthIdx, zhenId);
                     if (gds.empty()||pGood == boat_virtual_point)
                     {
-                        logger.log(INFO, formatString("{} :gds is empty, robot: {} ", zhenId, robotIdx));
+                        logger.log(INFO, formatString("{} :without gds,gds is empty, robot: {} ", zhenId, robotIdx));
                         continue;
                     }
                     vector<Direct> paths = AStar(pRobut, pGood); // 计算最短路径
@@ -177,7 +177,7 @@ void Output(int zhenId)
                     Point pGood = pickGood(berthIdx, zhenId); // 放下 good 的同时，选择一个新的 good
                     if (gds.empty()||pGood == boat_virtual_point)
                     {
-                        logger.log(INFO, formatString("{} :gds is empty, robot: {} ", zhenId, robotIdx));
+                        logger.log(INFO, formatString("{} :after pulling,gds is empty, robot: {} ", zhenId, robotIdx));
                         continue;
                     }
                     vector<Direct> paths = AStar(make_pair(robot.x, robot.y), pGood);

@@ -76,26 +76,28 @@ vector<int> collisionAvoid()
         for (int robotIdx2 = robotIdx1 + 1; robotIdx2 < robot_num; robotIdx2++)
         {
             Robot &robot2 = robots[robotIdx2];
-            // if (!robot1.hasPath()) {
-            //     if (calcManhattanDist(robot1.x, robot1.y, robot2.x, robot2.y) < 2) {
-            //         if (robot2.nextDirect() == Direct::pause) {
-            //             continue;
-            //         }
-            //         logger.log("robot2 insert pause");
-            //         robot2.insertDirect(Direct::pause);
-            //         continue;
-            //     }
-            // }
-            // if (!robot2.hasPath()) {
-            //     if (calcManhattanDist(robot1.x, robot1.y, robot2.x, robot2.y) < 2) {
-            //         if (robot1.nextDirect() == Direct::pause) {
-            //             continue;
-            //         }
-            //         logger.log("robot1 insert pause");
-            //         robot1.insertDirect(Direct::pause);
-            //         continue;
-            //     }
-            // }
+            if (!robot1.hasPath()) {
+                if (calcManhattanDist(robot1.x, robot1.y, robot2.x, robot2.y) < 2) {
+                    if (robot2.nextDirect() == Direct::pause) {
+                        continue;
+                    }
+                    logger.log("robot2 insert pause");
+                    robot2.insertDirect(Direct::pause);
+                    continue;
+                }
+                continue;
+            }
+            if (!robot2.hasPath()) {
+                if (calcManhattanDist(robot1.x, robot1.y, robot2.x, robot2.y) < 2) {
+                    if (robot1.nextDirect() == Direct::pause) {
+                        continue;
+                    }
+                    logger.log("robot1 insert pause");
+                    robot1.insertDirect(Direct::pause);
+                    continue;
+                }
+                continue;
+            }
             if (robot1.x + dx[robot1.nextDirect()] == robot2.x + dx[robot2.nextDirect()] && robot1.y + dy[robot1.nextDirect()] == robot2.y + dy[robot2.nextDirect()])
             { // case 1: 争抢同一个地方，只需要其中之一暂停一步，就会变成 case 2
                 logger.log("case 1");
@@ -116,10 +118,11 @@ vector<int> collisionAvoid()
             }
             else if (robot1.x + dx[robot1.nextDirect()] == robot2.x && robot1.y + dy[robot1.nextDirect()] == robot2.y)
             { // case 2: 相邻，默认 robot1 先移动，走到 robot2 当前位置的情况
+                logger.log("case 2");
                 if (robot1.x == robot2.x + dx[robot2.nextDirect()] && robot1.y == robot2.y + dy[robot2.nextDirect()])
                 { // robot2 也想往 robot1 的当前位置移动，也就是相向运动，只能选择一个绕路
                     if (isRobotAccessible(robot1.x + dx[(robot1.nextDirect() + 2) % 4], robot1.y + dy[(robot1.nextDirect() + 2) % 4]) &&
-                        isRobotAccessible(robot2.x + dx[(robot1.nextDirect() + 2) % 4], robot2.y + dy[(robot1.nextDirect() + 2) % 4]))
+                        isRobotAccessible(robot2.x + dx[(robot1.nextDirect() + 2) % 4], robot2.y + dy[(robot1.nextDirect() + 2) % 4])) //TODO
                     { // robot1 行走方向的左侧
                         if (priority_robot(robot1) > priority_robot(robot2))
                         { // robot2 绕路
@@ -135,7 +138,7 @@ vector<int> collisionAvoid()
                         }
                     }
                     else if (isRobotAccessible(robot2.x + dx[(robot1.nextDirect() + 3) % 4], robot2.y + dy[(robot1.nextDirect() + 3) % 4]) &&
-                             isRobotAccessible(robot2.x + dx[(robot1.nextDirect() + 3) % 4], robot2.y + dy[(robot1.nextDirect() + 3) % 4]))
+                             isRobotAccessible(robot2.x + dx[(robot1.nextDirect() + 3) % 4], robot2.y + dy[(robot1.nextDirect() + 3) % 4])) //TODO
                     { // robot1 行走方向的右侧
                         if (priority_robot(robot1) > priority_robot(robot2))
                         { // robot2 绕路
@@ -158,10 +161,14 @@ vector<int> collisionAvoid()
                 { // robot2 不会向 robot1 当前位置移动，只需要让 robot2 先走，给 robot1 让路
                     priorityOrder.push_back(make_pair(robotIdx2, robotIdx1));
                 }
+            } else if (robot1.x == robot2.x + dx[robot2.nextDirect()] && robot1.y == robot2.y + dy[robot2.nextDirect()]) 
+            { // case 3: 相邻，robot1先移动不碰撞，robot2 先移动，走到 robot1 当前位置的情况
+                logger.log("case 3"); 
+                priorityOrder.push_back(make_pair(robotIdx1, robotIdx2));
             }
         }
     }
-    vector<int> sortedRobots;
+        vector<int> sortedRobots;
     if (!priorityOrder.empty())
     {
         sortedRobots = topologicalSort(priorityOrder, robot_num);
@@ -173,5 +180,5 @@ vector<int> collisionAvoid()
             sortedRobots.push_back(i);
         }
     }
-    return sortedRobots;
+        return sortedRobots;
 }
