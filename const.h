@@ -33,6 +33,9 @@ enum Direct // 机器人移动方向
     pause
 };
 
+int extra_steps2avoid_collision = 0; // 碰撞避免额外走的路程
+int expected_scores = 0;    // 预期得分，与实际得分进行对比
+
 struct Robot // 机器人
 {
     int robotId;
@@ -77,10 +80,12 @@ struct Robot // 机器人
     void insertDirect(Direct dir) // 目前没有使用，使用会出现更多问题
     {
         this->path.insert(this->path.begin() + this->pid, dir);
+        ++extra_steps2avoid_collision;
     }
     void insertDirectAfter(Direct dir) // 目前没有使用，使用会出现更多问题 //TODO 注意现在下标
     {
         this->path.insert(this->path.begin() + this->pid+1, dir);
+        ++extra_steps2avoid_collision;
     }
 } robots[robot_num + 10];
 
@@ -104,6 +109,7 @@ struct Berth // 泊位
     {
         while (num > 0) 
         {
+            expected_scores += this->remain_goods_value.front();
             this->remain_goods_value.pop();
             --num;
         }
@@ -160,6 +166,8 @@ int reachable_point_count=0; // 统计可达点数目
 // 定义方向：右，左，上，下
 const int dx[5] = {0, 0, -1, 1, 0};
 const int dy[5] = {1, -1, 0, 0, 0};
+const int leftside[5] = {2, 3, 1, 0, 5};
+const int rightside[5] = {3, 2, 0, 1, 5};
 
 // 判断是否越界
 bool isVaild(int x, int y, Direct dir)
@@ -202,5 +210,6 @@ inline void summary(int zhen,int zhenId) { // 总结最后结算信息
         }
         logger.log(INFO, formatString("berth {} :remain_goods_num: {}, include: ", i, berths[i].remain_goods_num) + remain_goods_values);
     }
-    logger.log(INFO, formatString("跳帧:{},机器人恢复状态总帧数:{}", (zhenId-zhen),robot_recover_count));
+    logger.log(INFO, formatString("碰撞避免额外走的路程:{}", extra_steps2avoid_collision));
+    logger.log(INFO, formatString("预期得分:{}", expected_scores));
 }
