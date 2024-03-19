@@ -66,6 +66,25 @@ vector<int> topologicalSort(const vector<pair<int, int>> &priority_order, int nu
     return sorted_order;
 }
 
+// 判断dir方向的左右方向,dir2是dir的相对方向 
+// dir1是机器人的方向，dir2是相对于dir1的方向(0表示右，1表示左)
+Direct baseDirect(Direct dir1,Direct dir2) //如果输入超过0~3则返回4
+{
+    if (dir1 < 0 || dir1 > 3 || (dir2 != 0 && dir2 != 1))
+    {
+        logger.log(ERROR,formatString("baseDirect({}},{})",dir1,dir2));
+        return Direct::pause; // 无效输入
+    }
+    int directions[4] = {0,3,1,2}; //实现为正常方向，东南西北
+    int direction_back [4] = {0,2,3,1}; //恢复为题目方向
+    if (dir2 == 1) { //原方向右边
+        return Direct(direction_back[(directions[dir1] + 1) % 4]);
+    } else { //原方向左边
+        return Direct(direction_back[(directions[dir1] + 3) % 4]);
+    }
+}
+
+
 // 通过遍历所有机器人检测与robot1可能相撞的所有情况，为避免碰撞，返回一个新的机器人排序数组sortedRobots[10]
 vector<int> collisionAvoid()
 {

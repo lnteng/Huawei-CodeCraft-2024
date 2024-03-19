@@ -78,6 +78,10 @@ struct Robot // 机器人
     {
         this->path.insert(this->path.begin() + this->pid, dir);
     }
+    void insertDirectAfter(Direct dir) // 目前没有使用，使用会出现更多问题 //TODO 注意现在下标
+    {
+        this->path.insert(this->path.begin() + this->pid+1, dir);
+    }
 } robots[robot_num + 10];
 
 struct Berth // 泊位
