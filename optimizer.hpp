@@ -214,12 +214,22 @@ void InitselectBerth()
     {
         selected_berth[i] = res[i];
     }
+    // 初始化固定泊位辐射区域数目
+    for (int i =0; i< berth_num; i++){
+        berth_field_count[i] = 0;
+    }
     // 初始化地图点位所属泊位区域
     for (int i = 0; i < n; i++)
     {
         for (int j = 0; j < n; j++)
         {
-            berth_field[i][j] = locateBelongBerth(make_pair(i, j));
+            int bIdx = locateBelongBerth(make_pair(i, j));
+            berth_field[i][j] = bIdx;
+            if (bIdx != -1)
+            {
+                berth_field_count[bIdx]++; // 统计固定泊位辐射可达点数目
+                reachable_point_count++;
+            }
         }
     }
     // for (int x = 0; x < n; x++)
@@ -346,29 +356,68 @@ void InitRobot()
         // 设置选定机器人前往对应泊位区域的路径
         BFSPathSearch(best_robot_id, max_dist[i].first, getDistByRobot(selected_berth[max_dist[i].first], robots[best_robot_id])); // 设置机器人初始路径
     }
-    // 剩余机器人的处理：每个泊位按照运输时间由小到大依次分配机器人
-    pair<int, int> berth_trasnport_time[select_berth_num];
+    // // 剩余机器人的处理1：每个泊位按照运输时间由小到大依次分配机器人
+    // pair<int, int> berth_trasnport_time[select_berth_num];
+    // for (int i = 0; i < select_berth_num; i++)
+    // {
+    //     berth_trasnport_time[i] = make_pair(i, berths[selected_berth[i]].transport_time);
+    // }
+    // sort(berth_trasnport_time, berth_trasnport_time + select_berth_num, [](pair<int, int> a, pair<int, int> b)
+    //      { return a.second < b.second; }); // 排序：按照运输时间由小到大
+    // for (int selected_berth_id = 0; selected_berth_id < select_berth_num; selected_berth_id++)
+    // {
+    //     int min_dist = MAX_LIMIT;
+    //     int best_robot_id = -1;
+    //     for (int robot_id = 0; robot_id < robot_num; robot_id++)
+    //     {
+    //         if (getDistByRobot(selected_berth[berth_trasnport_time[selected_berth_id].first], robots[robot_id]) < min_dist && robots[robot_id].path.size() == 0)
+    //         {
+    //             min_dist = getDistByRobot(selected_berth[berth_trasnport_time[selected_berth_id].first], robots[robot_id]);
+    //             best_robot_id = robot_id;
+    //         }
+    //     }
+    //     // 设置选定机器人前往对应泊位区域的路径
+    //     BFSPathSearch(best_robot_id, berth_trasnport_time[selected_berth_id].first, getDistByRobot(selected_berth[berth_trasnport_time[selected_berth_id].first], robots[best_robot_id])); // 设置机器人初始路径
+    // }
+    // 剩余机器人的处理2：每个固定泊位按照辐射可达点面积按比例分配机器人
+
+    struct Compare
+    { // 自定义比较函数，让优先队列按照 pair 的第二个元素从大到小排序
+        bool operator()(const pair<int, int> &a, const pair<int, int> &b)
+        {
+            return a.second < b.second;
+        }
+    };
+    priority_queue<pair<int, int>, vector<pair<int, int>>, Compare> berth_field_count_sort; // 创建优先队列
     for (int i = 0; i < select_berth_num; i++)
     {
-        berth_trasnport_time[i] = make_pair(i, berths[selected_berth[i]].transport_time);
+        berth_field_count_sort.push(make_pair(i, berth_field_count[i]));
     }
-    sort(berth_trasnport_time, berth_trasnport_time + select_berth_num, [](pair<int, int> a, pair<int, int> b)
-         { return a.second < b.second; }); // 排序：按照运输时间由小到大
-    for (int selected_berth_id = 0; selected_berth_id < select_berth_num; selected_berth_id++)
-    {
-        int min_dist = MAX_LIMIT;
-        int best_robot_id = -1;
-        for (int robot_id = 0; robot_id < robot_num; robot_id++)
-        {
-            if (getDistByRobot(selected_berth[berth_trasnport_time[selected_berth_id].first], robots[robot_id]) < min_dist && robots[robot_id].path.size() == 0)
+    int part = reachable_point_count / (robot_num-boat_num); // 剩余每个机器人对应的辐射可达点数目，向下取整
+    for (int i = 0; i < boat_num;i++){
+        int allocated_robot_num = berth_field_count[i] / part; // 每个泊位分配的机器人数目,向下取整
+        for (int j = 0; j < allocated_robot_num; j++)
+        { // 每个泊位依次选择最近的机器人
+            int min_dist = MAX_LIMIT;
+            int best_robot_id = -1;
+            for (int robot_id = 0; robot_id < robot_num; robot_id++)
             {
-                min_dist = getDistByRobot(selected_berth[berth_trasnport_time[selected_berth_id].first], robots[robot_id]);
-                best_robot_id = robot_id;
+                if (robots[robot_id].path.size() == 0 && getDistByRobot(selected_berth[i], robots[robot_id]) < min_dist)
+                {
+                    min_dist = getDistByRobot(selected_berth[i], robots[robot_id]);
+                    best_robot_id = robot_id;
+                }
             }
+            if (best_robot_id == -1) {
+                logger.log(INFO, "robot is all allocated");
+                return; 
+            }
+            // 设置选定机器人前往对应泊位区域的路径
+            BFSPathSearch(best_robot_id, i, getDistByRobot(selected_berth[i], robots[best_robot_id])); // 设置机器人初始路径
         }
-        // 设置选定机器人前往对应泊位区域的路径
-        BFSPathSearch(best_robot_id, berth_trasnport_time[selected_berth_id].first, getDistByRobot(selected_berth[berth_trasnport_time[selected_berth_id].first], robots[best_robot_id])); // 设置机器人初始路径
+
     }
+    return;
 }
 
 /**

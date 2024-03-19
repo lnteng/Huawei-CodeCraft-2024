@@ -153,6 +153,8 @@ int money, boat_capacity, id; // boat_capacity:所有船舶容量相同；id:帧
 char ch[N][N];                // 地图
 int dists[berth_num][N][N];   // 泊位到各个点的距离
 int berth_field[N][N];        // 属于固定泊位的区域id, 和固定泊位一致，-1表示不可访问区域
+int berth_field_count[berth_num]; //统计固定泊位辐射可达点数目，用于初始化机器人，有冗余的位置避免溢出
+int reachable_point_count=0; // 统计可达点数目
 
 
 // 定义方向：右，左，上，下
