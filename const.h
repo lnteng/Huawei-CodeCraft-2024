@@ -20,6 +20,9 @@ const double boat_return_weight = 0.8; // 接近船舶满载权重，用于泊�
 const int select_berth_num = 5;        // 选择的固定泊位数量
 const int MAX_LIMIT = 999;             // 将此距离视为不可达
 const Point boat_virtual_point = make_pair(200, 200); // 船舶虚拟点/不可达点
+const int High_congestion = 2; // 拥堵度阈值(含等于)
+const int high_congestion_cost = 1; // 高拥堵度代价
+pair<int, int> congestion[N][N]; // 拥堵度，记录每个点的不可达方向数目(-1表示未初始化)和连续高拥堵度点数目(默认为0)
 
 // #Debug Info
 int robot_recover_count = 0;      // 机器人碰撞恢复总帧数统计

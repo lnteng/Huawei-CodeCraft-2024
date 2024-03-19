@@ -159,10 +159,11 @@ struct Node
  *
  * @param p1 起点。
  * @param p2 目标点。
+ * @param version 算法版本：版本0为普通A*算法，版本1为A*算法加入了拥堵度的启发式函数。
  * @return 表示存放从 p1 到 p2 最短路径的方向向量的路径。
  * 如果没有路径，则返回空向量。
  */
-vector<Direct> AStar(Point p1, Point p2)
+vector<Direct> AStar(Point p1, Point p2,int version=0)
 {
     if (!isRobotAccessible(p1.first, p1.second) || !isRobotAccessible(p2.first, p2.second))
     {
@@ -239,8 +240,19 @@ vector<Direct> AStar(Point p1, Point p2)
             {
                 visited[nx][ny] = true;
                 parent[nx][ny] = {cur.x, cur.y};
-                Node next(nx, ny, cur.g + 1, calcManhattanDist(nx, ny, p2.first, p2.second));
-                heap.push(next);
+                if (version == 0) {
+                    Node next(nx, ny, cur.g + 1, calcManhattanDist(nx, ny, p2.first, p2.second));
+                    heap.push(next);
+                }else if (version == 1 && congestion[nx][ny].first >= High_congestion)
+                {
+                    int extra_cost = high_congestion_cost; // 高拥堵度代价
+                    Node next(nx, ny, cur.g + 1 + extra_cost, calcManhattanDist(nx, ny, p2.first, p2.second));
+                    heap.push(next);
+                }else{
+                    logger.log(ERROR, "AStar: version is not supported");
+                    return AStar(p1, p2, 0); //使用默认版本
+                }
+                
             }
         }
     }

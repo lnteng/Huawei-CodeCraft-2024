@@ -27,7 +27,7 @@ void Init()
     char okk[100];
     scanf("%s", okk);
     getDistByBfs();    // 使用基于stack实现的广度优先搜索 (BFS) 算法计算每个泊位到网格上每个点的距离
-    InitselectBerth(); // 设置泊位初始位置，确定固定泊位和初始化地图点位所属泊位区域
+    InitselectBerth(); // 设置泊位初始位置，确定固定泊位和初始化地图点位所属泊位区域，并初始化每个点的拥堵度
     InitRobot();       // 初始化机器人路径，实现固定泊位区域分配
     Ok();
     // logger.log(INFO, "Init OK");
@@ -142,7 +142,7 @@ void Output(int zhenId)
                         logger.log(INFO, formatString("{} :without gds,gds is empty, robot: {} ", zhenId, robotIdx));
                         continue;
                     }
-                    vector<Direct> paths = AStar(pRobut, pGood); // 计算最短路径
+                    vector<Direct> paths = AStar(pRobut, pGood,1); // 计算最短路径
                     logger.log(INFO,formatString("{} :choose goods,robot {},{} ->pickGood: {},{}:{}", zhenId, robot.x, robot.y, pGood.first, pGood.second, paths.size()));
                     robot.newPath(paths);
                     continue;
@@ -180,7 +180,7 @@ void Output(int zhenId)
                         logger.log(INFO, formatString("{} :after pulling,gds is empty, robot: {} ", zhenId, robotIdx));
                         continue;
                     }
-                    vector<Direct> paths = AStar(make_pair(robot.x, robot.y), pGood);
+                    vector<Direct> paths = AStar(make_pair(robot.x, robot.y), pGood,1);
                     logger.log(formatString("{} :robot {},{} ->pickGood: {},{}:{}", zhenId, robot.x, robot.y, pGood.first, pGood.second, paths.size()));
                     robot.newPath(paths);
                 }

@@ -218,7 +218,15 @@ void InitselectBerth()
     for (int i =0; i< berth_num; i++){
         berth_field_count[i] = 0;
     }
-    // 初始化地图点位所属泊位区域
+    // 初始化地图拥堵度
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            congestion[i][j] = make_pair(-1, 0);
+        }
+    }
+    // 更新地图点位所属泊位区域
     for (int i = 0; i < n; i++)
     {
         for (int j = 0; j < n; j++)
@@ -226,9 +234,20 @@ void InitselectBerth()
             int bIdx = locateBelongBerth(make_pair(i, j));
             berth_field[i][j] = bIdx;
             if (bIdx != -1)
-            {
+            { // 可达点
                 berth_field_count[bIdx]++; // 统计固定泊位辐射可达点数目
                 reachable_point_count++;
+                // 四个方向是否是可达点
+                for (int k = 0; k < 4; k++)
+                {
+                    congestion[i][j].first = 0;
+                    if (!isRobotAccessible(i + dx[k], j + dy[k])) // 不可达点
+                    {
+                        congestion[i][j].first++;
+                    }
+                }
+            } else { //不可达点
+                congestion[i][j] = make_pair(4,0);
             }
         }
     }
@@ -239,6 +258,16 @@ void InitselectBerth()
     //     for (int y = 0; y < n; y++)
     //     {
     //         oss << berth_field[x][y] << "\t";
+    //     }
+    //     oss << "]";
+    //     logger.log(INFO, oss.str());
+    // }
+    // 打印拥堵度地图信息
+    // for (int x = 0; x < n;x++){
+    //     std::ostringstream oss;
+    //     oss << "[";
+    //     for (int y = 0; y < n; y++){
+    //         oss << congestion[x][y].first << "\t";
     //     }
     //     oss << "]";
     //     logger.log(INFO, oss.str());
