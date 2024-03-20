@@ -23,8 +23,8 @@ const Point boat_virtual_point = make_pair(200, 200); // 船舶虚拟点/不可�
 const int High_congestion = 2; // 拥堵度阈值(含等于)
 const int high_congestion_cost = 1; // 高拥堵度代价
 pair<int, int> congestion[N][N]; // 拥堵度，记录每个点的不可达方向数目(-1表示未初始化)和连续高拥堵度点数目(默认为0)
-const double goods_withinfield_ratio = 0.5; // 固定泊位区域外可选货物距离比例（避免机器人过于集中.1为机器人最大范围，0为不选择区域外获取） //TODO也可以考虑直接用一个固定值替代
-const int rounding_num = 9; // 小数近似控制，rounding_num舍rounding_num+1入 // TODO:test
+const double goods_withinfield_ratio = 0; // 固定泊位区域外可选货物距离比例（避免机器人过于集中.1为机器人最大范围，0为不选择区域外获取） //TODO也可以考虑直接用一个固定值替代
+const int rounding_num = 6; // 小数近似控制，rounding_num舍rounding_num+1入 // TODO:test
 
 
 // #Debug Info
@@ -85,7 +85,11 @@ struct Robot // 机器人
     }
     Direct nextDirect() // 目前没有使用，使用会出现更多问题
     {
-        return this->path[this->pid];
+        if (pid < path.size()){
+            return this->path[this->pid];
+        } else {
+            return pause;
+        }
     }
     void insertDirect(Direct dir) // 目前没有使用，使用会出现更多问题
     {

@@ -330,21 +330,3 @@ std::pair<int, int> berthSpaciousness(int berth_id) {
     std::pair<int, int> res = std::make_pair(reachable1, reachable2);
     return res;
 }
-
-// std::vector<int> checkCollision(std::vector<Robot>& robots, std::vector<Point>& before, std::vector<Point>& after) {
-//     std::unordered_map<Point, int, hash_pair> positionToId;
-//     std::vector<int> collisionIds;
-
-//     for (int i = 0; i < robots.size(); i++) {
-//         Point newPos = after[i];
-//         if (positionToId.count(newPos)) {
-//             // 如果新位置已经被其他机器人占据，那么就发生了碰撞
-//             collisionIds.push_back(robots[i].pid);
-//             collisionIds.push_back(positionToId[newPos]);
-//         } else {
-//             positionToId[newPos] = robots[i].pid;
-//         }
-//     }
-
-//     return collisionIds;
-// }

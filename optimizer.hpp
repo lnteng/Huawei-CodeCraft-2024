@@ -202,7 +202,8 @@ void InitselectBerth()
         }
         res.push_back(best_berth);
     }
-    // res = {0,5,6,7,8}; // TODO:测试用例
+    // res = {0,5,6,7,8}; // TODO:3-8测试用例
+    // res = {1,3,5,7,9}; // TODO:3-11测试用例
     // 检查泊位组是否溢出和数据是否正确
     if (res.size() != boat_num) {
         logger.log(ERROR, formatString("res size error:{}", res.size()));
