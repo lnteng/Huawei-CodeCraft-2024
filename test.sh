@@ -3,9 +3,10 @@
 maps="./maps"
 main="./build/main"
 output_file="./replay/output.txt"
-num_iterations=3 # 循环执行五次
+num_iterations=5 # 循环执行五次
 map_counter=0
 total_scores=0
+numbers=(12345 67890 11121 31415 92653 1)  # 定义你的数组
 
 # 清空输出文件
 > "$output_file"
@@ -19,10 +20,10 @@ for map in "$maps"/*; do
 
     for ((i=1; i<=$num_iterations; i++)); do
         if [ -f "$map" ]; then
-            random_number=$RANDOM
+            number=${numbers[$i-1]}  # 使用数组中的元素替代随机数
 
             # 执行PreliminaryJudge命令，并将输出重定向到output_file
-            ./PreliminaryJudge "$main" -s "$random_number" -l NONE -m "$map" >> "$output_file" 2>&1
+            ./PreliminaryJudge "$main" -s "$number" -l NONE -m "$map" >> "$output_file" 2>&1
             
             second_last_line=$(tail -n 2 "$output_file" | head -n 1)
             score=$(echo "$second_last_line" | grep -oP '"score":\K\d+')

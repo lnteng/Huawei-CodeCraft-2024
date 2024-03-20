@@ -19,6 +19,56 @@ double priority_robot(Robot robotx)
     return priority;
 }
 
+/**
+  * @brief 检测给定机器人ID移动序列是否会发生碰撞
+  *
+  * @param robots_order 机器人移动顺序
+  * @return 存储发生碰撞的机器人ID的vector
+  * 
+  * @note //TODO 需要测试被碰撞的机器人的下一步位置是否在之后的顺序中空出
+  */
+std::vector<int> checkCollisions(std::vector<int>& robots_order) {
+    std::map<Point, int> positionsBefore;  // 记录移动前的位置
+    std::map<Point, int> positionsAfter;  // 记录移动后的位置
+    std::vector<int> collisionRobots;  // 记录发生碰撞的机器人ID
+
+    // 记录所有机器人移动前的位置
+    for (const auto& robot : robots) {
+        positionsBefore[make_pair(robot.x,robot.y)] = robot.robotId;
+    }
+
+    // 根据输入的移动顺序，逐一移动机器人
+    for (const auto& rIdx : robots_order) {
+        Robot& robot = robots[rIdx];
+        // 如果被碰撞了，不移动
+        if (std::find(collisionRobots.begin(), collisionRobots.end(), robot.robotId) != collisionRobots.end()
+        ) {
+            continue;
+        }
+        Point newPos = make_pair(robot.x + dx[robot.nextDirect()], robot.y + dy[robot.nextDirect()]);// 移动机器人rIdx
+        // 检查是否有碰撞
+        if (positionsAfter.count(newPos)) {
+            // 如果有碰撞，记录碰撞的机器人ID
+            collisionRobots.push_back(robot.pid);
+            collisionRobots.push_back(positionsAfter[newPos]);
+            // 碰撞的机器人不发生移动
+            // 被碰撞的机器人动作取消
+            Robot& robot2 = robots[positionsAfter[newPos]]; // 获取被碰撞的机器人
+            positionsBefore.insert(make_pair(make_pair(robot2.x, robot2.y), robot2.pid)); // 记录被碰撞机器人移动前的位置
+            // TODO 测试：被碰撞的机器人的动作在判题器是回退吗？  
+            // Point newPos2 = make_pair(robot2.x + dx[robot2.nextDirect()], robot2.y + dy[robot2.nextDirect()]); // 被碰撞的机器人移动后的位置
+            // positionsAfter.erase(newPos2); // 被碰撞的机器人移动后的位置删除 
+        } else if (positionsBefore.count(newPos)) {
+            // 如果机器人移动后的位置与其他机器人移动前的位置重合，记录碰撞的机器人ID
+            collisionRobots.push_back(robot.pid);
+            collisionRobots.push_back(positionsBefore[newPos]);
+        } else {
+            positionsAfter[newPos]= robot.pid; // 记录机器人移动后的位置
+        }
+    }
+    return collisionRobots;
+}
+
 vector<int> topologicalSort(const vector<pair<int, int>> &priority_order, int num_nodes)
 {
     // 构建邻接表和入度数组
@@ -81,6 +131,15 @@ inline Direct baseDirect(Direct dir1, int dir2)
 // 通过遍历所有机器人检测与robot1可能相撞的所有情况，为避免碰撞，返回一个新的机器人排序数组sortedRobots[10]
 vector<int> collisionAvoid()
 {
+    vector<int> unsortedRobots;
+    for (int i = 0; i < robot_num; i++)
+    {
+        unsortedRobots.push_back(i);
+    }
+    if (checkCollisions(unsortedRobots).size() == 0)
+    {
+        return unsortedRobots;
+    } 
     vector<pair<int, int>> priorityOrder;
     for (int robotIdx1 = 0; robotIdx1 < robot_num; robotIdx1++)
     {
@@ -216,6 +275,14 @@ vector<int> collisionAvoid()
         {
             sortedRobots.push_back(i);
         }
+    }
+    if (sortedRobots.empty())
+    {
+        logger.log(WARNING,"collisionAvoid error: priorityOrder is empty"); 
+    } 
+    if (checkCollisions(sortedRobots).size() > 0)
+    {
+        vector<int> collisionRobots = checkCollisions(sortedRobots);
     }
     return sortedRobots;
 }

@@ -30,7 +30,7 @@ void Init()
     InitselectBerth(); // 设置泊位初始位置，确定固定泊位和初始化地图点位所属泊位区域，并初始化每个点的拥堵度
     InitRobot();       // 初始化机器人路径，实现固定泊位区域分配
     Ok();
-    // logger.log(INFO, "Init OK");
+    logger.log(INFO, "Init OK");
     fflush(stdout);
 }
 
@@ -111,6 +111,7 @@ void Output(int zhenId)
     vector<int> sortedRobots = collisionAvoid();
     for (auto robotIdx: sortedRobots)
     {
+        // logger.log(formatString("robotIdx: {}", robotIdx));
         Robot &robot = robots[robotIdx];
         Point pRobut = make_pair(robot.x, robot.y);
         if (robot.status == 0)
@@ -132,11 +133,13 @@ void Output(int zhenId)
                     int berthIdx = selected_berth[berth_field[robot.x][robot.y]];
                     vector<Direct> paths = bfsPaths(pRobut, berthIdx); // 拿到 good 的同时，规划好回到目标 berth 的路线
                     robot.newPath(paths);
+                    robotMove(robotIdx, robot.path[robot.pid]);
+                    robot.incrementPid();
                 }
                 else
                 { // 机器人当前位置没有货物, 则选择本区域优先度最高的一个货物, 并使用A*算法计算最短路径
                     int berthIdx = selected_berth[berth_field[robot.x][robot.y]];
-                    Point pGood = pickGood(berthIdx, zhenId);
+                    Point pGood = pickGood(robot.robotId, zhenId);
                     if (gds.empty()||pGood == boat_virtual_point)
                     {
                         logger.log(INFO, formatString("{} :without gds,gds is empty, robot: {} ", zhenId, robotIdx));
@@ -175,7 +178,7 @@ void Output(int zhenId)
                     berth.remain_goods_value.push(robot.goodValue);
                     logger.log(INFO, formatString("{}: pull {},{}", zhenId, robot.x, robot.y));
 
-                    Point pGood = pickGood(berthIdx, zhenId); // 放下 good 的同时，选择一个新的 good
+                    Point pGood = pickGood(robot.robotId, zhenId); // 放下 good 的同时，选择一个新的 good
                     if (gds.empty()||pGood == boat_virtual_point)
                     {
                         logger.log(INFO, formatString("{} :after pulling,gds is empty, robot: {} ", zhenId, robotIdx));
