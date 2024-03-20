@@ -95,24 +95,6 @@ Point pickGood(int rIdx, int zhenId)
 void InitselectBerth()
 {
     vector<int> res;
-    int berth_dist2[berth_num][berth_num]; // 任意两个泊位之间的欧式距离平方
-    for (int i = 0; i < berth_num; i++) //初始化
-    {
-        for (int j = i;j < berth_num; j++)
-        {
-            berth_dist2[i][j] = berth_dist2[j][i] = 
-                calcEulerDist2(berths[i].x, berths[i].y, berths[j].x, berths[j].y);
-        }
-    }
-    // for (int i=0 ;i<berth_num;i++){
-    //     std::ostringstream oss;
-    //     oss << "[";
-    //     for (int j=0;j<berth_num;j++){
-    //         oss << berth_dist2[i][j] << "\t";
-    //     }
-    //     oss << "]";
-    //     logger.log(INFO, oss.str());
-    // }
     int berth_group_num = berth_num; // 泊位组数目
     int berth_groups[berth_num][berth_num+1]; // 每个泊位组的泊位(最后一列存储该泊位组泊位数目)
     for (int i = 0; i < berth_num; i++)
@@ -136,8 +118,8 @@ void InitselectBerth()
                     if (berth_groups[i][k] == -1) continue;
                     for (int l = 0; l < berth_num; l++) {
                         if (berth_groups[j][l] == -1) continue;
-                        if (berth_dist2[k][l] < min_dist2) {
-                            min_dist2 = berth_dist2[k][l]; // k和l是两个泊位
+                        if (getDistByBerth(k, berths[l]) < min_dist2) { // 选择两个泊位组之间最短路径最小的两个泊位
+                            min_dist2 = getDistByBerth(k, berths[l]); // k和l是两个泊位
                             min_i = i;
                             min_j = j;
                         }
@@ -332,7 +314,7 @@ void BFSPathSearch(int robotIdx, int selected_berthIdx, int max_path)
                 if (berth_field[pRobut.first][pRobut.second] == selected_berthIdx)
                 { // 循环出口：直到机器人进入区域
                     robot.newPath(paths);
-                    // logger.log(INFO, formatString("find paths size:{}", paths.size()));
+                    logger.log(INFO, formatString("  find paths size:{}", paths.size()));
                     return;
                 }
                 pRobut.first += dx[dir]; // 在边界后多走一步，避免停留在边界
@@ -384,6 +366,7 @@ void InitRobot()
         { // 每个泊位到所有机器人的最大距离 //TODO 可以极差或标准差衡量
             if (getDistByRobot(selected_berth[select_berth_id], robots[robot_id]) == MAX_LIMIT)
             { // 机器人和泊位位置不可达
+                // max_dist[select_berth_id].second = -1;
                 continue;
             }
             max_dist[select_berth_id].second = max(max_dist[select_berth_id].second, getDistByRobot(selected_berth[select_berth_id], robots[robot_id]));
@@ -447,11 +430,13 @@ void InitRobot()
         berth_field_count_sort.push(make_pair(i, berth_field_count[i]));
     }
     int part = reachable_point_count / robot_num; // 剩余每个机器人对应的辐射可达点数目，向下取整
-    pair<int, int> max_field_berth = berth_field_count_sort.top();
-    // int part = reachable_point_count / robot_num; //十个一起分配使用
+    // 备份berth_field_count_sort的机器人ID顺序
+    vector<int> addition_berth_order;
+    // int part = reachable_point_count / robot_num; //十个一起分配使用 //TODO 如果实现了多机器人碰撞使用
     while (!berth_field_count_sort.empty()) {
         pair<int, int> top = berth_field_count_sort.top(); //(固定部位Id和辐射面积)
         berth_field_count_sort.pop();
+        addition_berth_order.push_back(top.first);
         // int allocated_robot_num = std::floor(static_cast<double>(berth_field_count[top.first]) / part + 0.5); // 每个泊位分配的机器人数目,四舍五入
         int allocated_robot_num;
         double fraction_part = static_cast<double>(berth_field_count[top.first]) / part - std::floor(static_cast<double>(berth_field_count[top.first]) / part); // 小数部分
@@ -494,8 +479,25 @@ void InitRobot()
     {
         if (robots[robot_id].path.size() == 0)
         {
-            logger.log(WARNING, formatString("  addtional allocated_robot_num[{}]:{}", max_field_berth.first, 1));
-            BFSPathSearch(robot_id, max_field_berth.first, getDistByRobot(selected_berth[max_field_berth.first], robots[robot_id])); // 设置机器人初始路径
+            // 按照港口区域面积顺序 addition_berth_order ，找到机器人可达的港口
+            for (int i = 0; i < addition_berth_order.size(); i++)
+            {
+                if (getDistByRobot(selected_berth[addition_berth_order[i]], robots[robot_id]) < MAX_LIMIT)
+                {
+                    logger.log(WARNING, formatString("  addtional allocated_robot_num[{}]:{}", addition_berth_order[i], 1));
+                    BFSPathSearch(robot_id, addition_berth_order[i], getDistByRobot(selected_berth[addition_berth_order[i]], robots[robot_id])); // 设置机器人初始路径
+                    break;
+                }
+            }
+            if (robots[robot_id].path.size() == 0) { //没有找到对应的固定港口
+                logger.log(ERROR, formatString("robot_id:{} has no path to selected berth", robot_id));
+                vector<Direct> path = {Direct::pause}; //前robot_id帧先保持不动，避免初始没有路径可能导致其他问题
+                for (int i = 0; i < robot_id; i++)
+                {
+                    path.push_back(Direct::pause);
+                }
+                robots[robot_id].newPath(path);
+            }
         }
     }
     logger.log(INFO, "InitRobot part 2 over");
