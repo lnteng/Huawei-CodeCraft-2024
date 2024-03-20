@@ -217,5 +217,9 @@ vector<int> collisionAvoid()
             sortedRobots.push_back(i);
         }
     }
+    if (sortedRobots.empty())
+    {
+        logger.log(WARNING,"collisionAvoid error: priorityOrder is empty"); 
+    }
     return sortedRobots;
 }

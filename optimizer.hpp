@@ -8,15 +8,18 @@
 /**
  * @brief 选择货物
  *
- * @param bIdx 泊位ID
+ * @param rIdx 机器人ID
  * @param zhenId 当前帧数
  * @return 选择的货物坐标,如果没有货物返回boat_virtual_point(200,200)
  *
+ * @note 选择货物的策略：选择以固定泊位为基准选择货物，选择未被标记的货物，然后选择优先级最高的货物
  */
-Point pickGood(int bIdx, int zhenId)
+Point pickGood(int rIdx, int zhenId)
 {
     Point p = boat_virtual_point;
     int maxPriority = 0;
+    Point cur_alternative_gds = boat_virtual_point;
+    double cur_gds_priority = 0.0;
     for (auto it = gds.begin(); it != gds.end(); ) {
         auto &gd = *it;
         if (gd.second.end_time <= zhenId)
@@ -24,17 +27,26 @@ Point pickGood(int bIdx, int zhenId)
             it = gds.erase(it);
             continue;
         }
-        if (selected_berth[locateBelongBerth(gd.first)] != bIdx)
-        { // 选择区域内货物
-            ++it;
-            continue;
-        }
         if (gd.second.marked)
         { // 已经被标记
             ++it;
             continue;
         }
-        int dist = getDistByPoint(bIdx, gd.first);
+        int dist = getDistByPoint(selected_berth[robots[rIdx].selected_berthIdx], gd.first); // 货物到机器人目标港口的最短距离
+        if (locateBelongBerth(gd.first) != robots[rIdx].selected_berthIdx)
+        { // 选择区域外货物在一定范围内作为备选
+            if (goods_withinfield_ratio>0 && int(Goods_tolerance * dist/goods_withinfield_ratio) + zhenId <= gd.second.end_time)  // 取货物容错系数/固定泊位区域外可选货物距离比例
+            { // 选择区域外货物在一定范围内作为备选
+                double gds_priority = gd.second.getPriorityOutsideFeild(dist);
+                if (gds_priority > cur_gds_priority)
+                {
+                    cur_gds_priority = gds_priority; //备选货物优先级
+                    cur_alternative_gds = gd.first; //备选货物位置
+                }
+            }
+            ++it;
+            continue;
+        }
         if (int(Goods_tolerance * dist) + zhenId > gd.second.end_time)  // 取货物容错系数
         { // 当前机器人来不及处理该 good 
             ++it;
@@ -51,9 +63,15 @@ Point pickGood(int bIdx, int zhenId)
         }
         ++it;
     }
+    // 如果该区域无货物，则按照距离选择邻近区域内货物
+    if(p == boat_virtual_point || cur_alternative_gds != boat_virtual_point) {
+        p = cur_alternative_gds;
+    }
     if (p != boat_virtual_point)
     {
         gds[p].marked = true;
+    } else {
+        logger.log(WARNING, formatString("pickGood: rIdx:{},selected_bIdx:{} has no goods", rIdx,robots[rIdx].selected_berthIdx));
     }
     return p;
 }
@@ -157,7 +175,7 @@ void InitselectBerth()
     //     logger.log(INFO, oss.str());
     // }
 
-    // 从每个泊位组中选择运输时间最短的泊位
+    // 从每个泊位组中选择运输时间最短的泊位（优先在宽敞泊位中选择）
     for (int i = 0; i < berth_num; i++) {
         if (berth_groups[i][berth_num] == 0) continue; // 该泊位组i无泊位
         int min_transport_time = INT_MAX;
@@ -238,10 +256,10 @@ void InitselectBerth()
             { // 可达点
                 berth_field_count[bIdx]++; // 统计固定泊位辐射可达点数目
                 reachable_point_count++;
+                congestion[i][j].first = 0;
                 // 四个方向是否是可达点
                 for (int k = 0; k < 4; k++)
                 {
-                    congestion[i][j].first = 0;
                     if (!isRobotAccessible(i + dx[k], j + dy[k])) // 不可达点
                     {
                         congestion[i][j].first++;
@@ -283,7 +301,7 @@ void InitselectBerth()
 }
 
 /**
- * @brief 根据已有的广度优先搜索以找到机器人移动到选定泊位区域的路径。
+ * @brief 根据已有的广度优先搜索以找到机器人移动到选定泊位区域的路径,并初始化机器人固定泊位属性。
  *
  * @param robotsIdx 机器人的索引。
  * @param selected_berthIdx 所选泊位的索引。
@@ -292,19 +310,16 @@ void InitselectBerth()
  *
  * @note 全局变量 dists[berth_num][N][N] 记录任一点到泊位 i 的最短距离。
  * @note 机器人进入区域后会自动选择该区域的货物目标。
+ * @note 初始化robot.berthId，此函数只用于初始化机器人
  */
 void BFSPathSearch(int robotIdx, int selected_berthIdx, int max_path)
 { // 机器人前往区域路径，进入区域后，机器人会自动选择货物目标
     logger.log(INFO, formatString("robotIdx:{}, selected_berthIdx[{}]:{}, max_path:{}", robotIdx, selected_berthIdx,selected_berth[selected_berthIdx], max_path));
     Robot &robot = robots[robotIdx];
+    robot.selected_berthIdx = selected_berthIdx;
     Point pRobut = make_pair(robot.x, robot.y); // 模拟机器人位置
     vector<Direct> paths;
     vector<int> nums = {0, 1, 2, 3};
-    // 随机数生成器
-    std::random_device rd;
-    std::mt19937 g(rd());
-    // 打乱数组顺序
-    std::shuffle(nums.begin(), nums.end(), g);
     while (paths.size() <= max_path) // 防止死循环
     {
         for (int dir : nums)
@@ -316,7 +331,7 @@ void BFSPathSearch(int robotIdx, int selected_berthIdx, int max_path)
                 if (berth_field[pRobut.first][pRobut.second] == selected_berthIdx)
                 { // 循环出口：直到机器人进入区域
                     robot.newPath(paths);
-                    logger.log(INFO, formatString("find paths size:{}", paths.size()));
+                    // logger.log(INFO, formatString("find paths size:{}", paths.size()));
                     return;
                 }
                 pRobut.first += dx[dir]; // 在边界后多走一步，避免停留在边界
@@ -352,6 +367,7 @@ void InitRobot()
                     robots[robot_index].y = y;
                     robots[robot_index].goods = 0;
                     robots[robot_index].status = 1;
+                    robots[robot_index].selected_berthIdx = -1; // 未分配泊位
                     robot_index++; // TODO 注意数组越界，复赛阶段可以购买机器人
                 }
             }
@@ -416,7 +432,7 @@ void InitRobot()
     //     BFSPathSearch(best_robot_id, berth_trasnport_time[selected_berth_id].first, getDistByRobot(selected_berth[berth_trasnport_time[selected_berth_id].first], robots[best_robot_id])); // 设置机器人初始路径
     // }
     // TODO 考虑初始路径长度的因素
-    // 剩余机器人的处理2：每个固定泊位按照辐射可达点面积按比例分配机器人
+    // 剩余机器人的处理2：每个固定泊位按照辐射可达点面积按比例分配机器人(最多分配数目减去上一轮已分配的)
     struct Compare
     { // 自定义比较函数，让优先队列按照 pair 的第二个元素从大到小排序
         bool operator()(const pair<int, int> &a, const pair<int, int> &b)
@@ -429,12 +445,28 @@ void InitRobot()
     {
         berth_field_count_sort.push(make_pair(i, berth_field_count[i]));
     }
-    int part = reachable_point_count / (robot_num-boat_num); // 剩余每个机器人对应的辐射可达点数目，向下取整
+    int part = reachable_point_count / robot_num; // 剩余每个机器人对应的辐射可达点数目，向下取整
+    pair<int, int> max_field_berth = berth_field_count_sort.top();
     // int part = reachable_point_count / robot_num; //十个一起分配使用
     while (!berth_field_count_sort.empty()) {
-        pair<int, int> top = berth_field_count_sort.top();
+        pair<int, int> top = berth_field_count_sort.top(); //(固定部位Id和辐射面积)
         berth_field_count_sort.pop();
-        int allocated_robot_num = std::floor(static_cast<double>(berth_field_count[top.first]) / part + 0.5); // 每个泊位分配的机器人数目,四舍五入
+        // int allocated_robot_num = std::floor(static_cast<double>(berth_field_count[top.first]) / part + 0.5); // 每个泊位分配的机器人数目,四舍五入
+        int allocated_robot_num;
+        double fraction_part = static_cast<double>(berth_field_count[top.first]) / part - std::floor(static_cast<double>(berth_field_count[top.first]) / part); // 小数部分
+        if (fraction_part >= static_cast<double>(rounding_num+1) / 10) {
+            allocated_robot_num = std::ceil(static_cast<double>(berth_field_count[top.first]) / part); // num+1入
+        } else {
+            allocated_robot_num = std::floor(static_cast<double>(berth_field_count[top.first]) / part); // num舍
+        }
+        // 减去上一轮已分配的机器人数
+        for (int rIdx = 0; rIdx < robot_num; rIdx++)
+        {
+            if (robots[rIdx].selected_berthIdx == top.first)
+            {
+                allocated_robot_num--;
+            }
+        }
         logger.log(INFO, formatString("allocated_robot_num[{}]:{}", top.first, allocated_robot_num));
         for (int j = 0; j < allocated_robot_num; j++)
         { // 每个泊位依次选择最近的机器人
@@ -456,6 +488,14 @@ void InitRobot()
             BFSPathSearch(best_robot_id, top.first, getDistByRobot(selected_berth[top.first], robots[best_robot_id])); // 设置机器人初始路径
         }
 
+    }
+    for (int robot_id = 0; robot_id < robot_num; robot_id++) // 如果（近似后）有剩余机器人，分配给辐射区域最大的港口
+    {
+        if (robots[robot_id].path.size() == 0)
+        {
+            logger.log(WARNING, formatString("  addtional allocated_robot_num[{}]:{}", max_field_berth.first, 1));
+            BFSPathSearch(robot_id, max_field_berth.first, getDistByRobot(selected_berth[max_field_berth.first], robots[robot_id])); // 设置机器人初始路径
+        }
     }
     logger.log(INFO, "InitRobot part 2 over");
     return;

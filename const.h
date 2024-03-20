@@ -23,6 +23,9 @@ const Point boat_virtual_point = make_pair(200, 200); // 船舶虚拟点/不可�
 const int High_congestion = 2; // 拥堵度阈值(含等于)
 const int high_congestion_cost = 1; // 高拥堵度代价
 pair<int, int> congestion[N][N]; // 拥堵度，记录每个点的不可达方向数目(-1表示未初始化)和连续高拥堵度点数目(默认为0)
+const double goods_withinfield_ratio = 0.5; // 固定泊位区域外可选货物距离比例（避免机器人过于集中.1为机器人最大范围，0为不选择区域外获取） //TODO也可以考虑直接用一个固定值替代
+const int rounding_num = 9; // 小数近似控制，rounding_num舍rounding_num+1入 // TODO:test
+
 
 // #Debug Info
 int robot_recover_count = 0;      // 机器人碰撞恢复总帧数统计
@@ -46,10 +49,11 @@ struct Robot // 机器人
     int robotId;
     int x, y, goods; // x,y:坐标 goods:货物数量
     int status;      // 机器人状态 0:恢复中 1:正常运行
-    // int mbx, mby;
+    // int mbx, mby; // 不绑定货物，考虑到取得货物以前可能出现新的更优货物
     vector<Direct> path; // 记录 A* 计算的路径
     int pid;             // 走到第几步
     int goodValue;       // 携带 good 的 value
+    int selected_berthIdx;     // 机器人选择固定泊位
     Robot() {}
     Robot(int startX, int startY)
     {
@@ -57,6 +61,7 @@ struct Robot // 机器人
         y = startY;
         pid = 0;
         goodValue = 0;
+        selected_berthIdx = -1; // 未选择固定泊位
     }
     void incrementPid() //更新pid和下一步方向dir
     {
@@ -157,6 +162,10 @@ struct GoodsProperty // 货物属性
         // this->priority = value / dist; // 方案一：货物优先级=货物价值/距离
         this->priority = value * value / dist; // 方案二：货物优先级=货物价值平方/距离
         // this->priority = pow(value, 2.5) /dist;// 方案三：货物优先级=货物价值1.5次方/距离
+    }
+    double getPriorityOutsideFeild(int dist)
+    {
+        return value * value / dist; // 与updatePriority保持一致
     }
 };
 
