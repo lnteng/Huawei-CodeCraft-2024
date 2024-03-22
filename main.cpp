@@ -88,7 +88,11 @@ int Input()
         if (x != robots[i].x || y != robots[i].y|| (robots[i].status == 0&&robots[i].nextDirect() == pause)) { 
             robots[i].x = x;
             robots[i].y = y;
-            logger.log(WARNING, formatString("{} :robot {} failed to move, robot collision in ({}, {})", id, i, robots[i].x, robots[i].y));
+            if (robots[i].status == 0) {
+                logger.log(WARNING, formatString("{} :robot {} status0 pause, robot collision in ({}, {})", id, i, robots[i].x, robots[i].y));
+            } else {
+                logger.log(WARNING, formatString("{} :robot {} failed to move, robot collision in ({}, {})", id, i, robots[i].x, robots[i].y));
+            }
             if (robots[i].pid > 0 && robots[i].pid + 1 < robots[i].path.size()) {
                 for (int idx = robots[i].pid - 1; idx <= robots[i].pid + 1; idx++) {
                     logger.log(to_string(robots[i].path[idx]));
@@ -115,7 +119,7 @@ void Output(int zhenId)
     // TODO ：差错检测
     // TODO : 机器人碰撞处理
     vector<int> sortedRobots = collisionAvoid(zhenId);
-    for (auto robotIdx: sortedRobots)
+    for (int robotIdx = 0; robotIdx < robot_num; robotIdx++)
     {
         logger.log(formatString("robotIdx: {} ({},{}) dir:{}", robotIdx,robots[robotIdx].x,robots[robotIdx].y,robots[robotIdx].path[robots[robotIdx].pid]));
         Robot &robot = robots[robotIdx];
@@ -139,8 +143,8 @@ void Output(int zhenId)
                     int berthIdx = selected_berth[berth_field[robot.x][robot.y]];
                     vector<Direct> paths = bfsPaths(pRobut, berthIdx); // 拿到 good 的同时，规划好回到目标 berth 的路线
                     robot.newPath(paths);
-                    robotMove(robotIdx, robot.path[robot.pid]);
-                    robot.incrementPid();
+                    // robotMove(robotIdx, robot.path[robot.pid]);
+                    // robot.incrementPid();
                 }
                 else
                 { // 机器人当前位置没有货物, 则选择本区域优先度最高的一个货物, 并使用A*算法计算最短路径

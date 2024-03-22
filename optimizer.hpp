@@ -359,7 +359,8 @@ bool updateSelectedBerth(int group_id,int zhenId)
     logger.log(INFO, formatString("updateSelectedBerth: group_id:{}, past_bidx:{}", group_id, past_bidx));
     if (cur_group_vec.size()== 0) logger.log(ERROR, formatString("updateSelectedBerth: group_id:{} has no berth", group_id));
     if (cur_group_vec.size()== 1) return false; //只有一个泊位，跳过
-    double berth_priority[cur_group_vec.size()] = {0.0}; //泊位优先级
+    vector<double> berth_priority;
+    berth_priority.resize(cur_group_vec.size(),0.0);//泊位优先级
     double cur_gds_priority = 0.0;
     for (auto it = gds.begin(); it != gds.end(); ) {
         auto &gd = *it;
