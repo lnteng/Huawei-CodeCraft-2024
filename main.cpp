@@ -42,6 +42,12 @@ void Init()
  */
 inline void robotMove(int idx, Direct dir)
 {
+    if (!isRobotAccessible(robots[idx].x+dx[dir], robots[idx].y+dy[dir])){
+        logger.log(WARNING, formatString("robot {} nextdir is not accessible", idx));
+        vector<Direct> paths = {};
+        robots[idx].newPath(paths);
+        return; // 路径走完了，Pid++也不会影响
+    }
     robots[idx].x += dx[dir];
     robots[idx].y += dy[dir];
     switch (dir)
@@ -79,7 +85,7 @@ int Input()
     { // 机器人状态
         int x, y;
         scanf("%d%d%d%d", &robots[i].goods, &x, &y, &robots[i].status);
-        if (x != robots[i].x || y != robots[i].y || robots[i].status == 0) {
+        if (x != robots[i].x || y != robots[i].y|| (robots[i].status == 0&&robots[i].nextDirect() == pause)) { 
             robots[i].x = x;
             robots[i].y = y;
             logger.log(WARNING, formatString("{} :robot {} failed to move, robot collision in ({}, {})", id, i, robots[i].x, robots[i].y));
@@ -111,8 +117,7 @@ void Output(int zhenId)
     vector<int> sortedRobots = collisionAvoid(zhenId);
     for (auto robotIdx: sortedRobots)
     {
-        // 
-        
+        logger.log(formatString("robotIdx: {} ({},{}) dir:{}", robotIdx,robots[robotIdx].x,robots[robotIdx].y,robots[robotIdx].path[robots[robotIdx].pid]));
         Robot &robot = robots[robotIdx];
         Point pRobut = make_pair(robot.x, robot.y);
         if (robot.status == 0)

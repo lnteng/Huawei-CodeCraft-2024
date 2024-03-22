@@ -39,9 +39,25 @@ std::vector<int> checkCollisions(std::vector<int>& robots_order,int zhenId) {
     // 记录所有机器人移动后的预测位置
     for (const auto& rIdx : robots_order)
     {   
-
         int nextX = robots[rIdx].x + dx[robots[rIdx].nextDirect()];
         int nextY = robots[rIdx].y + dy[robots[rIdx].nextDirect()];
+        if (robots[rIdx].status == 0 || robots[rIdx].nextDirect() == Direct::pause){
+            // 检测原位置是否已经存在，是否发生碰撞
+            if (positionsAfter.find(make_pair(robots[rIdx].x, robots[rIdx].y)) != positionsAfter.end())
+            { //发生碰撞
+                int rIdx2= positionsAfter[make_pair(robots[rIdx].x, robots[rIdx].y)];
+                collisionRobots.push_back(robots[rIdx].robotId);
+                positionsAfter[make_pair(robots[rIdx].x, robots[rIdx].y)] = robots[rIdx].robotId;
+                // 处理机器人2，退回原位置
+                collisionRobots.push_back(robots[rIdx2].robotId);
+                positionsAfter[make_pair(robots[rIdx2].x, robots[rIdx2].y)] = robots[rIdx2].robotId;
+
+                positionsAfter[make_pair(robots[rIdx].x, robots[rIdx].y)] = robots[rIdx].robotId;
+            } else {
+                positionsAfter[make_pair(robots[rIdx].x, robots[rIdx].y)] = robots[rIdx].robotId;
+            }
+            continue;
+        }
         // 检测positionsAfter[make_pair(nextX, nextY)]是否已经存在
         if (positionsAfter.find(make_pair(nextX, nextY)) != positionsAfter.end())
         {
@@ -50,32 +66,51 @@ std::vector<int> checkCollisions(std::vector<int>& robots_order,int zhenId) {
             collisionRobots.push_back(robots[rIdx].robotId);
             if (rIdx2 != -1) {
                 // 处理robot2
-                if (robots[rIdx2].hasPath()&&robots[rIdx2].nextDirect() != Direct::pause)
+                if (robots[rIdx2].hasPath()&&robots[rIdx2].nextDirect() != Direct::pause&&robots[rIdx2].status !=0)
                 { // 如果发生了移动则复位
-                    positionsAfter[make_pair(robots[rIdx2].x, robots[rIdx2].y)] = rIdx2; // 实际位置应该未移动时坐标
+                    positionsAfter[make_pair(robots[rIdx2].x, robots[rIdx2].y)] = robots[rIdx2].robotId; // 实际位置应该未移动时坐标
                     positionsAfter[make_pair(nextX, nextY)] = -1; //碰撞点也不可前往
                 }
                 collisionRobots.push_back(robots[rIdx2].robotId); 
-            } 
-            // 处理robot1
-            if (robots[rIdx].hasPath()&&robots[rIdx].nextDirect() != Direct::pause)
-            { // 如果发生了移动则复位
-                positionsAfter[make_pair(robots[rIdx].x, robots[rIdx].y)] = rIdx; // 实际位置应该未移动时坐标
+            } else {
+                collisionRobots.push_back(-1); 
             }
-        } else { // 暂时未碰撞
-            positionsAfter[make_pair(nextX, nextY)] = robots[rIdx].robotId;
+            // 处理robot1
+            positionsAfter[make_pair(robots[rIdx].x, robots[rIdx].y)] = robots[rIdx].robotId; // 实际位置应该未移动时坐标
+        } else { 
+            //处理交换位置
+            if (positionsBefore.find(make_pair(nextX, nextY)) != positionsBefore.end())
+            {
+                int rIdx2 = positionsBefore[make_pair(nextX, nextY)] ;
+                int nextX2 = robots[rIdx2].x + dx[robots[rIdx2].nextDirect()];
+                int nextY2 = robots[rIdx2].y + dy[robots[rIdx2].nextDirect()];
+                if (positionsBefore.find(make_pair(nextX2,nextY2)) != positionsBefore.end())
+                { // 发生相向碰撞
+                    // 处理robot
+                    collisionRobots.push_back(robots[rIdx].robotId);
+                    positionsAfter[make_pair(robots[rIdx].x, robots[rIdx].y)] = robots[rIdx].robotId;
+                    // 处理robot2
+                    collisionRobots.push_back(robots[rIdx2].robotId);
+                    positionsAfter[make_pair(robots[rIdx2].x, robots[rIdx2].y)] = robots[rIdx2].robotId;
+                    continue;
+                } else {
+                    positionsAfter[make_pair(nextX, nextY)] = robots[rIdx].robotId;
+                }
+            } else {
+                positionsAfter[make_pair(nextX, nextY)] = robots[rIdx].robotId;
+            }
         }
     }
 
-    if (collisionRobots.size()>0) {
-        for (int i = 0; i < robots_order.size(); i++)
-        {
-            logger.log("  robots_order:"+to_string(robots_order[i]));
-        }
-    }
-    // 去重
-    std::sort(collisionRobots.begin(), collisionRobots.end());
-    collisionRobots.erase(std::unique(collisionRobots.begin(), collisionRobots.end()), collisionRobots.end());
+    // if (collisionRobots.size()>0) {
+    //     for (int i = 0; i < robots_order.size(); i++)
+    //     {
+    //         logger.log("  robots_order:"+to_string(robots_order[i]));
+    //     }
+    // }
+    // // 去重
+    // std::sort(collisionRobots.begin(), collisionRobots.end());
+    // collisionRobots.erase(std::unique(collisionRobots.begin(), collisionRobots.end()), collisionRobots.end());
     // if (collisionRobots.size()>0) {
     //     for (int i = 0; i < robots_order.size(); i++)
     //     {
