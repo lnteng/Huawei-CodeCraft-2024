@@ -76,6 +76,7 @@ Point pickGood(int rIdx, int zhenId)
     return p;
 }
 
+
 /**
  * @brief 初始化泊位选择。
  *

@@ -79,7 +79,7 @@ int Input()
     { // 机器人状态
         int x, y;
         scanf("%d%d%d%d", &robots[i].goods, &x, &y, &robots[i].status);
-        if (x != robots[i].x || y != robots[i].y) { // 会缺少暂停时被碰撞的机器人
+        if (x != robots[i].x || y != robots[i].y || robots[i].status == 0) {
             robots[i].x = x;
             robots[i].y = y;
             logger.log(WARNING, formatString("{} :robot {} failed to move, robot collision in ({}, {})", id, i, robots[i].x, robots[i].y));
@@ -105,7 +105,7 @@ int Input()
 
 void Output(int zhenId)
 {
-    logger.log(INFO, formatString("zhenId: {}", zhenId));
+    // logger.log(INFO, formatString("zhenId: {}", zhenId));
     // TODO ：差错检测
     // TODO : 机器人碰撞处理
     vector<int> sortedRobots = collisionAvoid(zhenId);
