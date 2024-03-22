@@ -27,10 +27,12 @@ double priority_robot(Robot robotx)
   * 
   * @note //TODO 需要测试被碰撞的机器人的下一步位置是否在之后的顺序中空出;目前问题：顺序，可能是机器人同时移动？
   */
-std::vector<int> checkCollisions(int zhenId) {
+std::vector<pair<int,int>> checkCollisions(int zhenId) {
     std::map<Point, int> positionsBefore;  // 记录移动前的位置
     std::map<Point, int> positionsAfter;  // 记录移动后的位置
-    std::vector<int> collisionRobots;  // 记录发生碰撞的机器人ID
+    // std::vector<int> collisionRobots;  // 记录发生碰撞的机器人ID
+    std::vector<pair<int,int>> collisionRobots;
+    std::map<Point,pair<int,int>> freePoint; //记录碰撞后空出的点位置
 
     // 记录所有机器人移动前的位置
     for (int rIdx = 0;rIdx < robot_num; rIdx++) {
@@ -46,10 +48,15 @@ std::vector<int> checkCollisions(int zhenId) {
             if (positionsAfter.find(make_pair(robots[rIdx].x, robots[rIdx].y)) != positionsAfter.end())
             { //发生碰撞
                 int rIdx2= positionsAfter[make_pair(robots[rIdx].x, robots[rIdx].y)];
-                collisionRobots.push_back(robots[rIdx].robotId);
+                if (rIdx2 == -1) {
+                    collisionRobots.push_back(make_pair(robots[rIdx].robotId,-1)); 
+                    continue;
+                }
+                // collisionRobots.push_back(robots[rIdx].robotId);
                 positionsAfter[make_pair(robots[rIdx].x, robots[rIdx].y)] = robots[rIdx].robotId;
                 // 处理机器人2，退回原位置
-                collisionRobots.push_back(robots[rIdx2].robotId);
+                // collisionRobots.push_back(robots[rIdx2].robotId);
+                collisionRobots.push_back(make_pair(robots[rIdx].robotId,robots[rIdx2].robotId));
                 positionsAfter[make_pair(robots[rIdx2].x, robots[rIdx2].y)] = robots[rIdx2].robotId;
 
                 positionsAfter[make_pair(robots[rIdx].x, robots[rIdx].y)] = robots[rIdx].robotId;
@@ -65,17 +72,20 @@ std::vector<int> checkCollisions(int zhenId) {
             // 发生碰撞，如果被碰撞的机器人没有移动，设置下一步为所在机器人为-1，表示已经存在机器人在该店碰撞
             int rIdx2 = positionsAfter[make_pair(nextX, nextY)];
             logger.log("下一步碰撞");
-            collisionRobots.push_back(robots[rIdx].robotId);
+            // collisionRobots.push_back(robots[rIdx].robotId);
             if (rIdx2 != -1) {
                 // 处理robot2
                 if (robots[rIdx2].hasPath()&&robots[rIdx2].nextDirect() != Direct::pause&&robots[rIdx2].status !=0)
                 { // 如果发生了移动则复位
                     positionsAfter[make_pair(robots[rIdx2].x, robots[rIdx2].y)] = robots[rIdx2].robotId; // 实际位置应该未移动时坐标
-                    positionsAfter[make_pair(nextX, nextY)] = -1; //碰撞点也不可前往
+                    positionsAfter[make_pair(nextX, nextY)] = -1; //两个机器人退回原位，碰撞点也不可前往
+                    freePoint[make_pair(robots[rIdx].x,robots[rIdx].y)] = make_pair(robots[rIdx].robotId,rIdx2);
                 }
-                collisionRobots.push_back(robots[rIdx2].robotId); 
+                // collisionRobots.push_back(robots[rIdx2].robotId); 
+                collisionRobots.push_back(make_pair(robots[rIdx].robotId,robots[rIdx2].robotId));
             } else {
-                collisionRobots.push_back(-1); 
+                // collisionRobots.push_back(-1);
+                collisionRobots.push_back(make_pair(robots[rIdx].robotId,-1)); 
             }
             // 处理robot1
             positionsAfter[make_pair(robots[rIdx].x, robots[rIdx].y)] = robots[rIdx].robotId; // 实际位置应该未移动时坐标
@@ -93,10 +103,11 @@ std::vector<int> checkCollisions(int zhenId) {
                 { // 发生交换位置
                     
                     // 处理robot
-                    collisionRobots.push_back(robots[rIdx].robotId);
+                    // collisionRobots.push_back(robots[rIdx].robotId);
                     positionsAfter[make_pair(robots[rIdx].x, robots[rIdx].y)] = robots[rIdx].robotId;
                     // 处理robot2
-                    collisionRobots.push_back(robots[rIdx2].robotId);
+                    // collisionRobots.push_back(robots[rIdx2].robotId);
+                    collisionRobots.push_back(make_pair(robots[rIdx].robotId,robots[rIdx2].robotId));
                     positionsAfter[make_pair(robots[rIdx2].x, robots[rIdx2].y)] = robots[rIdx2].robotId;
                     continue;
                 } else {
@@ -107,22 +118,20 @@ std::vector<int> checkCollisions(int zhenId) {
             }
         }
     }
+    // 将collisionRobots中的-1分别替换为实际的两个机器人ID
+    std::vector<pair<int,int>> res;
+    for (int i = 0; i < collisionRobots.size(); i++)
+    {
+        if (collisionRobots[i].second == -1)
+        { //将-1替换为原本会发生碰撞的两个机器人
+            Point p = make_pair(robots[collisionRobots[i].first].x,robots[collisionRobots[i].first].y);
+            res.push_back(make_pair(collisionRobots[i].first,freePoint[p].first));
+            res.push_back(make_pair(collisionRobots[i].first,freePoint[p].second));
+        } else{
+            res.push_back(collisionRobots[i]);
+        }
+    }
 
-    // if (collisionRobots.size()>0) {
-    //     for (int i = 0; i < robots_order.size(); i++)
-    //     {
-    //         logger.log("  robots_order:"+to_string(robots_order[i]));
-    //     }
-    // }
-    // // 去重
-    // std::sort(collisionRobots.begin(), collisionRobots.end());
-    // collisionRobots.erase(std::unique(collisionRobots.begin(), collisionRobots.end()), collisionRobots.end());
-    // if (collisionRobots.size()>0) {
-    //     for (int i = 0; i < robots_order.size(); i++)
-    //     {
-    //         logger.log("  robots_order_res:"+to_string(robots_order[i]));
-    //     }
-    // }
     return collisionRobots;
 }
 
@@ -340,19 +349,17 @@ vector<int> collisionAvoid(int zhenId)
     {
         logger.log(WARNING,"collisionAvoid error: priorityOrder is empty"); 
     }
-    vector<int> collisionRobots = checkCollisions(zhenId); //会发生碰撞的机器人 
+    vector<pair<int,int>> collisionRobots = checkCollisions(zhenId); //会发生碰撞的机器人 
     // TODO 测试
     if (collisionRobots.size() > 0) 
     {   // TODO 使一部分发生碰撞的机器人暂停一步
         logger.log(WARNING,"collisionAvoid handle");
         // 遍历发生碰撞的顺序
-        // std::sort(collisionRobots.begin(), collisionRobots.end());
-        vector<int> tempOrder;
-        vector<int> bestOrder=collisionRobots;
+        vector<pair<int,int>> bestOrder=collisionRobots;
         // 打印collisionRobots
         for (int i = 0; i < collisionRobots.size(); i++)
         {
-            logger.log(formatString("{}:collisionRobots include:{}",zhenId,collisionRobots[i]));
+            logger.log(formatString("{}:collisionRobots include:({},{})",zhenId,collisionRobots[i].first,collisionRobots[i].second));
         }
     
         // do
