@@ -76,7 +76,6 @@ Point pickGood(int rIdx, int zhenId)
     return p;
 }
 
-
 /**
  * @brief 初始化泊位选择。
  *
@@ -97,6 +96,10 @@ void InitselectBerth()
     vector<int> res;
     int berth_group_num = berth_num; // 泊位组数目
     int berth_groups[berth_num][berth_num+1]; // 每个泊位组的泊位(最后一列存储该泊位组泊位数目)
+    for (int bIdx = 0; bIdx < berth_num; bIdx++)
+    { // 初始化
+        berthBelongGroup[bIdx]= -1;
+    }
     for (int i = 0; i < berth_num; i++)
     {
         berth_groups[i][berth_num] = 1; //初始泊位组i只有一个泊位
@@ -146,28 +149,79 @@ void InitselectBerth()
 
         berth_group_num--;
     }
-    // 打印
-    // for (int i=0 ;i<berth_num;i++){
-    //     std::ostringstream oss;
-    //     oss << "[";
-    //     for (int j=0;j<berth_num+1;j++){
-    //         oss << berth_groups[i][j] << "\t";
+    // 打印berth_groups
+    for (int i=0 ;i<berth_num;i++){
+        std::ostringstream oss;
+        oss << "[";
+        for (int j=0;j<berth_num+1;j++){
+            oss << berth_groups[i][j] << "\t";
+        }
+        oss << "]";
+        logger.log(INFO, oss.str());
+    }
+    // 转换为 vector<vector<int>>
+    for (int i = 0; i < berth_num; ++i) {
+        if (berth_groups[i][berth_num] == 0) continue; // 该泊位组i无泊位
+        vector<int> cur_group;
+        for (int j = 0; j < berth_num; ++j) {
+            if (berth_groups[i][j] == -1) continue;
+            cur_group.push_back(j);
+            if (berthBelongGroup[j] == -1)
+            {
+                berthBelongGroup[j] = berth_groups_vec.size(); // 更新泊位所属组
+            } else { // 所属泊位组初始化错误，重复变更一个泊位所属泊位组
+                logger.log(ERROR, formatString("berth{} belong group error:{}", j, berthBelongGroup[j]));
+            }    
+        }
+        berth_groups_vec.push_back(cur_group);
+    }
+    // 打印 berth_groups_vec
+    logger.log(INFO, "berth_groups_vec:");
+    for (int i = 0; i < berth_groups_vec.size(); ++i) {
+        std::ostringstream oss;
+        oss << "[";
+        for (int j = 0; j < berth_groups_vec[i].size(); ++j) {
+            oss << berth_groups_vec[i][j] << "\t";
+        }
+        oss << "]";
+        logger.log(INFO, oss.str());
+    }
+    // for (int i = 0; i < berth_num; i++) {
+    //     if (berthBelongGroup[i] == -1) {
+    //         logger.log(ERROR, formatString("berth{} belong group error:{}", i, berthBelongGroup[i]));
     //     }
-    //     oss << "]";
-    //     logger.log(INFO, oss.str());
+    //     logger.log(INFO, formatString("berth{} belong group:{}", i, berthBelongGroup[i]));
     // }
 
-    // 从每个泊位组中选择运输时间最短的泊位（优先在宽敞泊位中选择）
+    // 固定泊位选择0：从每个泊位组中选择运输时间最短的泊位（优先在宽敞泊位中选择）
+    // 固定泊位选择1：从每个泊位组中选择离其他港口组最短距离和最大的泊位（优先在宽敞泊位中选择）
+    int other_berthgroups_dist[berth_num]; //该泊位到其他泊位组泊位距离总和
+    for (int bIdx=0;bIdx<berth_num;bIdx++){
+        other_berthgroups_dist[bIdx] = 0;
+        for (int bIdx2 = 0; bIdx2<berth_num;bIdx2++){
+            if (berthBelongGroup[bIdx] == berthBelongGroup[bIdx2]) continue;
+            other_berthgroups_dist[bIdx] += getDistByBerth(bIdx, berths[bIdx2]);
+        }
+    }
     for (int i = 0; i < berth_num; i++) {
         if (berth_groups[i][berth_num] == 0) continue; // 该泊位组i无泊位
-        int min_transport_time = INT_MAX;
+        if (berth_groups[i][berth_num] == 1) {
+            for (int bIdx = 0; bIdx < berth_num; bIdx++) {
+                if (berth_groups[i][bIdx] == -1) continue; // 泊位组i不包含泊位bIdx
+                res.push_back(bIdx); // 该泊位组只有一个泊位
+                break;
+            }
+            continue;  
+        }
+        // int min_transport_time = INT_MAX;
+        int max_distance_between_berth = 0;
         int best_berth = -1;
         for (int j = 0; j < berth_num; j++) {
-            if (berth_groups[i][j] == -1) continue;
+            if (berth_groups[i][j] == -1) continue; // 泊位组i不包含泊位j
             pair<int,int> reachable = berthSpaciousness(j);
             if (reachable.first>=4 && reachable.first<=reachable.second  // 泊位宽敞
-                && berths[j].transport_time < min_transport_time) {
-                min_transport_time = berths[j].transport_time;
+                && other_berthgroups_dist[j] > max_distance_between_berth) {
+                max_distance_between_berth = other_berthgroups_dist[j];
                 best_berth = j;
             }
         }
@@ -184,6 +238,14 @@ void InitselectBerth()
         }
         res.push_back(best_berth);
     }
+    // 固定泊位选择2：从每个泊位组中选出固定泊位使得区域尽量均匀（优先在宽敞泊位中选择）
+    // TODO 实现穷举组合，尽量均匀每片区域范围
+    // 打印res
+    for (int i = 0; i < res.size(); i++)
+    {
+        logger.log(INFO, formatString("res[{}]:{}", i, res[i]));
+    }
+
     // res = {0,5,6,7,8}; // TODO:3-8测试用例
     // res = {1,3,5,7,9}; // TODO:3-11测试用例
     // 检查泊位组是否溢出和数据是否正确
@@ -228,7 +290,7 @@ void InitselectBerth()
             congestion[i][j] = make_pair(-1, 0);
         }
     }
-    // 更新地图点位所属泊位区域
+    // 更新地图点位所属泊位区域和拥堵度地图信息
     for (int i = 0; i < n; i++)
     {
         for (int j = 0; j < n; j++)
@@ -253,6 +315,7 @@ void InitselectBerth()
             }
         }
     }
+    // 打印初始化船舶区域信息
     // for (int x = 0; x < n; x++)
     // {
     //     std::ostringstream oss;
@@ -282,6 +345,76 @@ void InitselectBerth()
 
     return;
 }
+
+// 函数：变更泊位组（输入泊位组ID），根据船舶货物平均密度数量，重新选择固定泊位，返回是否变更
+bool updateSelectedBerth(int group_id,int zhenId)
+{
+    // 计算泊位组内泊位的货物价值密度
+    int past_bidx = selected_berth[group_id]; //记录过去的固定泊位对应泊位
+    Point p = boat_virtual_point;
+    int cur_maxPriority = 0; //价值最大泊位优先级
+    Point cur_alternative_gds = boat_virtual_point;
+    vector<int> cur_group_vec = berth_groups_vec[group_id];
+    logger.log(INFO, formatString("updateSelectedBerth: group_id:{}, past_bidx:{}", group_id, past_bidx));
+    if (cur_group_vec.size()== 0) logger.log(ERROR, formatString("updateSelectedBerth: group_id:{} has no berth", group_id));
+    if (cur_group_vec.size()== 1) return false; //只有一个泊位，跳过
+    double berth_priority[cur_group_vec.size()] = {0.0}; //泊位优先级
+    double cur_gds_priority = 0.0;
+    for (auto it = gds.begin(); it != gds.end(); ) {
+        auto &gd = *it;
+        if (gd.second.end_time <= zhenId)
+        { // 删除超时的 good
+            it = gds.erase(it);
+            continue;
+        }
+        for (int bIdx = 0; bIdx < cur_group_vec.size(); bIdx++) {
+            if (getDistByPoint(bIdx, gd.first) > berth_field_radius) continue; // 距离泊位最短距离为xx的货物
+            // berth_priority[bIdx] += gd.second.value; // 该区域货物价值密度
+            berth_priority[bIdx] += gd.second.getPriorityOutsideFeild(getDistByPoint(bIdx, gd.first)); // 该区域货物价值
+        } 
+        ++it;
+    }
+    cur_maxPriority = berth_priority[0];
+    int cur_maxPriorityIdx = 0;
+    // 选择货物价值最高的区域
+    for (int i = 1; i < cur_group_vec.size(); i++) {
+        if (berth_priority[i] > cur_maxPriority)
+        {
+            cur_maxPriorityIdx = i;
+            cur_maxPriority = berth_priority[i];
+        }
+    }
+    int new_bidx = cur_group_vec[cur_maxPriorityIdx];
+    if (past_bidx == new_bidx) {
+        return false; // 未变更固定泊位
+    }
+    // selected_berth[group_id] = new_bidx;
+    logger.log(INFO, formatString("updateSelectedBerth: group_id:{}, past_bidx:{}, new_bidx:{}", group_id, past_bidx, new_bidx));
+    return true;
+}
+
+// 函数：变更泊位组（输入泊位组ID），根据船舶货物平均密度数量，重新选择固定泊位，返回是否变更
+bool endSelectedBerth(int group_id,int zhenId)
+{
+    bool res = false;
+    int min_dist = MAX_LIMIT;
+    int selectedBerth=-1;
+    for (int bIdx =0;bIdx< boat_num;bIdx++){
+        if (!endBoatGroup[bIdx]) continue; //泊位组已终止
+        int dist = getDistByBerth(selected_berth[group_id], berths[selected_berth[bIdx]]);
+        if (dist < min_dist) {
+            min_dist = dist;
+            selectedBerth = selected_berth[bIdx];
+        }
+    }
+    if (selectedBerth==-1){ //没有可达的港口了，不用处理
+        logger.log("endBoatGroup");
+        return false;
+    } 
+    selected_berth[group_id]=selectedBerth;
+    return true;
+}
+
 
 /**
  * @brief 根据已有的广度优先搜索以找到机器人移动到选定泊位区域的路径,并初始化机器人固定泊位属性。
@@ -314,7 +447,7 @@ void BFSPathSearch(int robotIdx, int selected_berthIdx, int max_path)
                 if (berth_field[pRobut.first][pRobut.second] == selected_berthIdx)
                 { // 循环出口：直到机器人进入区域
                     robot.newPath(paths);
-                    logger.log(INFO, formatString("  find paths size:{}", paths.size()));
+                    // logger.log(INFO, formastString("  find paths size:{}", paths.size()));
                     return;
                 }
                 pRobut.first += dx[dir]; // 在边界后多走一步，避免停留在边界

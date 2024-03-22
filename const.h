@@ -24,11 +24,14 @@ const int High_congestion = 2; // 拥堵度阈值(含等于)
 const int high_congestion_cost = 1; // 高拥堵度代价
 pair<int, int> congestion[N][N]; // 拥堵度，记录每个点的不可达方向数目(-1表示未初始化)和连续高拥堵度点数目(默认为0)
 const double goods_withinfield_ratio = 0; // 固定泊位区域外可选货物距离比例（避免机器人过于集中.1为机器人最大范围，0为不选择区域外获取） //TODO也可以考虑直接用一个固定值替代
-const int rounding_num = 6; // 小数近似控制，rounding_num舍rounding_num+1入 // TODO:test
+const int rounding_num = 5; // 小数近似控制，rounding_num舍rounding_num+1入 // TODO:test
+const int berth_field_radius = 40; // 变更固定泊位时，比较货物区域半径 // TODO 改为该区域最远点距离的一个比例
 
-
+vector<vector<int>> berth_groups_vec; // 泊位组，注意泊位组初始化以后暂时不会变动
+int berthBelongGroup[berth_num]; // 泊位所属泊位组，用于变更泊位时使用
 // #Debug Info
 int robot_recover_count = 0;      // 机器人碰撞恢复总帧数统计
+int endBoatGroup[boat_num] = {1}; // 记录仍可使用的泊位组id，用于结束时判断
 
 enum Direct // 机器人移动方向
 {

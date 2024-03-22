@@ -79,7 +79,7 @@ int Input()
     { // 机器人状态
         int x, y;
         scanf("%d%d%d%d", &robots[i].goods, &x, &y, &robots[i].status);
-        if (x != robots[i].x || y != robots[i].y || robots[i].status == 0) {
+        if (x != robots[i].x || y != robots[i].y) { // 会缺少暂停时被碰撞的机器人
             robots[i].x = x;
             robots[i].y = y;
             logger.log(WARNING, formatString("{} :robot {} failed to move, robot collision in ({}, {})", id, i, robots[i].x, robots[i].y));
@@ -105,13 +105,14 @@ int Input()
 
 void Output(int zhenId)
 {
-    // logger.log(INFO, formatString("zhenId: {}", zhenId));
+    logger.log(INFO, formatString("zhenId: {}", zhenId));
     // TODO ：差错检测
     // TODO : 机器人碰撞处理
-    vector<int> sortedRobots = collisionAvoid();
+    vector<int> sortedRobots = collisionAvoid(zhenId);
     for (auto robotIdx: sortedRobots)
     {
-        // logger.log(formatString("robotIdx: {}", robotIdx));
+        // 
+        
         Robot &robot = robots[robotIdx];
         Point pRobut = make_pair(robot.x, robot.y);
         if (robot.status == 0)
@@ -243,6 +244,24 @@ void Output(int zhenId)
             { // 船舶装载满
                 logger.log(INFO, formatString("{}:full boat {} boatGo,berth {} remain: {}", zhenId,i,boats[i].pos,berth.remain_goods_num));
                 boatGo(i);
+                // TODO 重新选择固定船舶位置
+                // bool flag = updateSelectedBerth(berthBelongGroup[boats[i].pos], zhenId);
+                // if (flag)
+                // {
+                //     // 修改本区域机器人目标港口，删除本区域机器人此步后（碰撞避免）以后的路径
+                //     for (int j = 0; j < robot_num; j++)
+                //     {
+                //         if (berth_field[robots[j].x][robots[j].y] == berthBelongGroup[boats[i].pos])
+                //         {
+                //             if (robots[j].goods) { // 有货物的重新计算路径去新港口
+                //                 vector<Direct> paths = {};
+                //                 robots[j].newPath(paths);
+                //             }
+                //             // 机器人绑定固定船舶ID不用更新
+                //         }
+                //     }
+                //     // TODO 更新固定区域
+                // }
             }
         }
         else
@@ -256,6 +275,9 @@ void Output(int zhenId)
                     boats[i].num = boat_capacity;
                     logger.log(INFO, formatString("{}:full boat {} boatGo,berth {} remain: {}", zhenId,i,boats[i].pos,berth.remain_goods_num));
                     boatGo(i);
+            
+                    bool flag = updateSelectedBerth(berthBelongGroup[boats[i].pos], zhenId);
+
                 }
                 else
                 { // 港口货物装载空
@@ -266,10 +288,27 @@ void Output(int zhenId)
             }
             else
             { // 船舶装载完毕或船舶剩余货物未空或临近结束时间
-                if (boats->pos != -1 && (end_flag || boats[i].num == boat_capacity))
+                if (boats[i].pos != -1 && (end_flag || boats[i].num == boat_capacity))
                 { // 船舶装载完毕或船舶剩余货物未空
                     logger.log(INFO, formatString("{}:deadline boat {} boatGo,berth {} remain: {}", zhenId,i,boats[i].pos,berth.remain_goods_num));
                     boatGo(i);
+                    // TODO 单独的策略(如果有可达的港口)，应该从其他泊位组选择
+                    endBoatGroup[berthBelongGroup[boats[i].pos]] = 0;
+                    bool flag = endSelectedBerth(berthBelongGroup[boats[i].pos], zhenId);
+                    if (flag) //如果存在可达的剩余港口
+                    {
+                         for (int j = 0; j < robot_num; j++)
+                        {
+                            if (berth_field[robots[j].x][robots[j].y] == berthBelongGroup[boats[i].pos])
+                            {
+                                if (robots[j].goods) { // 有货物的重新计算路径去新港口
+                                    vector<Direct> paths = {};
+                                    robots[j].newPath(paths);
+                                }
+                                // 机器人绑定固定船舶ID不用更新
+                            }
+                        }
+                    }// 否则已经没有可达的港口了
                 }
             }
         }
