@@ -366,6 +366,86 @@ void InitselectBerth()
                 }
             }
         }
+    } else if (single_channel_counts < low_single_channel_counts) { // 图1特化
+        // res = {0,3,6,7,9}; // TODO:初赛图1特化
+        // 初始化全局变量 selected_berth 固定泊位数组
+        for (int i = 0; i < boat_num; i++)
+        {
+            selected_berth[i] = res[i];
+        }
+        // 更新地图点位所属泊位区域和拥堵度地图信息
+        for (int i = 0; i < n; i++)
+        {
+            for (int j = 0; j < n; j++)
+            {
+                pair<int,int> bIdx_and_dist = locateBelongBerth(make_pair(i, j));
+                int bIdx = bIdx_and_dist.first;
+                berth_field[i][j] = bIdx;
+                if (bIdx != -1)
+                { // 可达点
+                    if (bIdx_and_dist.second < berth_field_over)
+                    {
+                        berth_field_count[bIdx]++; // 统计固定泊位辐射可达点数目
+                        reachable_point_count++;
+                    }
+                    congestion[i][j].first = 0;
+                    // 四个方向是否是可达点
+                    for (int k = 0; k < 4; k++)
+                    {
+                        if (!isRobotAccessible(i + dx[k], j + dy[k])) // 不可达点
+                        {
+                            congestion[i][j].first++;
+                        }
+                        if (congestion[i][j].first == 2 || congestion[i][j].first == 3)
+                        {
+                            single_channel_counts++;
+                        }
+                    }
+                } else { //不可达点
+                    congestion[i][j] = make_pair(4,0);
+                }
+            }
+        }
+    } else {
+        // res = {0,3,6,7,9}; // TODO:初赛图3特化
+        // 初始化全局变量 selected_berth 固定泊位数组
+        for (int i = 0; i < boat_num; i++)
+        {
+            selected_berth[i] = res[i];
+        }
+        // 更新地图点位所属泊位区域和拥堵度地图信息
+        for (int i = 0; i < n; i++)
+        {
+            for (int j = 0; j < n; j++)
+            {
+                pair<int,int> bIdx_and_dist = locateBelongBerth(make_pair(i, j));
+                int bIdx = bIdx_and_dist.first;
+                berth_field[i][j] = bIdx;
+                if (bIdx != -1)
+                { // 可达点
+                    if (bIdx_and_dist.second < berth_field_over)
+                    {
+                        berth_field_count[bIdx]++; // 统计固定泊位辐射可达点数目
+                        reachable_point_count++;
+                    }
+                    congestion[i][j].first = 0;
+                    // 四个方向是否是可达点
+                    for (int k = 0; k < 4; k++)
+                    {
+                        if (!isRobotAccessible(i + dx[k], j + dy[k])) // 不可达点
+                        {
+                            congestion[i][j].first++;
+                        }
+                        if (congestion[i][j].first == 2 || congestion[i][j].first == 3)
+                        {
+                            single_channel_counts++;
+                        }
+                    }
+                } else { //不可达点
+                    congestion[i][j] = make_pair(4,0);
+                }
+            }
+        }
     }
     // logger.log(INFO,formatString("single_channel_counts:{}", single_channel_counts));
     // 打印初始化船舶区域信息
@@ -622,6 +702,7 @@ void InitRobot()
     // int part = reachable_point_count / robot_num; //十个一起分配使用 //TODO 如果实现了多机器人碰撞使用
     while (!berth_field_count_sort.empty()) {
         pair<int, int> top = berth_field_count_sort.top(); //(固定部位Id和辐射面积)
+        int rIdx = top.first;
         berth_field_count_sort.pop();
         addition_berth_order.push_back(top.first);
         // int allocated_robot_num = std::floor(static_cast<double>(berth_field_count[top.first]) / part + 0.5); // 每个泊位分配的机器人数目,四舍五入
@@ -632,9 +713,74 @@ void InitRobot()
         } else {
             allocated_robot_num = std::floor(static_cast<double>(berth_field_count[top.first]) / part); // num舍
         }
-        if (single_channel_counts > high_single_channel_counts) {
-            allocated_robot_num = 1; // num+1入
+        if (single_channel_counts > high_single_channel_counts) { // 图2
+            switch (selected_berth[rIdx])
+            {
+            case 0:
+                allocated_robot_num = 1;
+                break;
+            case 3:
+                allocated_robot_num = 1;
+                break;
+            case 6:
+                allocated_robot_num = 1;
+                break;
+            case 7:
+                allocated_robot_num = 1;
+                break;
+            case 9:
+                allocated_robot_num = 1;
+                break;
+            default:
+                break;
+            }   
+        } else if (single_channel_counts < low_single_channel_counts) { //图1
+            allocated_robot_num = 1;
+            // switch (selected_berth[rIdx])
+            // {
+            // case 0:
+            //     allocated_robot_num = 1;
+            //     break;
+            // case 3:
+            //     allocated_robot_num = 1;
+            //     break;
+            // case 6:
+            //     allocated_robot_num = 1;
+            //     break;
+            // case 7:
+            //     allocated_robot_num = 1;
+            //     break;
+            // case 9:
+            //     allocated_robot_num = 1;
+            //     break;
+            // default:
+            //     break;
+            // } 
+        } else { // 图3
+            allocated_robot_num = 1;
+            // switch (selected_berth[rIdx])
+            // {
+            // case 0:
+            //     allocated_robot_num = 1;
+            //     break;
+            // case 3:
+            //     allocated_robot_num = 1;
+            //     break;
+            // case 6:
+            //     allocated_robot_num = 1;
+            //     break;
+            // case 7:
+            //     allocated_robot_num = 1;
+            //     break;
+            // case 9:
+            //     allocated_robot_num = 1;
+            //     break;
+            // default:
+            //     allocated_robot_num = 1;
+            //     break;
+            // }
         }
+
         // 减去上一轮已分配的机器人数
         // for (int rIdx = 0; rIdx < robot_num; rIdx++)
         // {
