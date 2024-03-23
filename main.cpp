@@ -173,8 +173,9 @@ void Output(int zhenId)
                     robotMove(robotIdx, robot.path[robot.pid]);
                     robot.incrementPid();
                 } else {
-                    vector<Direct> paths = {};
+                    vector<Direct> paths = {Direct::pause};
                     robot.newPath(paths);
+                    logger.log("test1");
                 }
                 
             }
@@ -217,8 +218,9 @@ void Output(int zhenId)
                     robotMove(robotIdx, robot.path[robot.pid]);
                     robot.incrementPid();
                 } else {
-                    vector<Direct> paths = {};
+                    vector<Direct> paths = {Direct::pause};
                     robot.newPath(paths);
+                    logger.log("test2");
                 }
             }
         }
