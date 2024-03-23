@@ -61,7 +61,7 @@ std::vector<pair<int,int>> checkCollisions(int zhenId) {
 
                 positionsAfter[make_pair(robots[rIdx].x, robots[rIdx].y)] = robots[rIdx].robotId;
             } else {
-                // logger.log(formatString("robot{} pause {},{}",rIdx,robots[rIdx].x,robots[rIdx].y));
+                logger.log(formatString("robot{} pause {},{}",rIdx,robots[rIdx].x,robots[rIdx].y));
                 positionsAfter[make_pair(robots[rIdx].x, robots[rIdx].y)] = robots[rIdx].robotId;
             }
             continue;
@@ -94,7 +94,7 @@ std::vector<pair<int,int>> checkCollisions(int zhenId) {
             if (positionsBefore.find(make_pair(nextX, nextY)) != positionsBefore.end())
             {
                 int rIdx2 = positionsBefore[make_pair(nextX, nextY)] ;
-                // logger.log(formatString("交换位置 robot{} next:{},{}->{}",rIdx,nextX,nextY,rIdx2));
+                logger.log(formatString("交换位置 robot{} next:{},{}->{}",rIdx,nextX,nextY,rIdx2));
                 int nextX2 = robots[rIdx2].x + dx[robots[rIdx2].nextDirect()];
                 int nextY2 = robots[rIdx2].y + dy[robots[rIdx2].nextDirect()];
                 if (positionsBefore.find(make_pair(nextX2,nextY2)) != positionsBefore.end()
