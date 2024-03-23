@@ -33,7 +33,7 @@ Point pickGood(int rIdx, int zhenId)
             continue;
         }
         int dist = getDistByPoint(selected_berth[robots[rIdx].selected_berthIdx], gd.first); // 货物到机器人目标港口的最短距离
-        if (locateBelongBerth(gd.first) != robots[rIdx].selected_berthIdx)
+        if (locateBelongBerth(gd.first).first != robots[rIdx].selected_berthIdx)
         { // 选择区域外货物在一定范围内作为备选
             if (goods_withinfield_ratio>0 && int(Goods_tolerance * dist/goods_withinfield_ratio) + zhenId <= gd.second.end_time)  // 取货物容错系数/固定泊位区域外可选货物距离比例
             { // 选择区域外货物在一定范围内作为备选
@@ -282,6 +282,7 @@ void InitselectBerth()
     // 初始化固定泊位辐射区域数目
     for (int i =0; i< berth_num; i++){
         berth_field_count[i] = 0;
+
     }
     // 初始化地图拥堵度
     for (int i = 0; i < n; i++)
@@ -296,12 +297,16 @@ void InitselectBerth()
     {
         for (int j = 0; j < n; j++)
         {
-            int bIdx = locateBelongBerth(make_pair(i, j));
+            pair<int,int> bIdx_and_dist = locateBelongBerth(make_pair(i, j));
+            int bIdx = bIdx_and_dist.first;
             berth_field[i][j] = bIdx;
             if (bIdx != -1)
             { // 可达点
-                berth_field_count[bIdx]++; // 统计固定泊位辐射可达点数目
-                reachable_point_count++;
+                if (bIdx_and_dist.second < berth_field_over)
+                {
+                    berth_field_count[bIdx]++; // 统计固定泊位辐射可达点数目
+                    reachable_point_count++;
+                }
                 congestion[i][j].first = 0;
                 // 四个方向是否是可达点
                 for (int k = 0; k < 4; k++)

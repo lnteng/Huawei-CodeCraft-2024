@@ -129,20 +129,26 @@ void printMoreDebugINfo(int berth_index)
  * @param point 要定位的地图点。
  * @return 该点所属固定端口区的ID。 如果该点位于不可访问的区域，则返回 -1。
  */
-int locateBelongBerth(Point point)
+pair<int,int> locateBelongBerth(Point point)
 {
     // 返回值：返回地图点位所属的固定泊位区域的id
     int best_selected_berth_id = -1; // 不可达区域
+    int dist = INT_MAX;
     if (!isRobotAccessible(point.first, point.second))
     {
-        return best_selected_berth_id;
+        return make_pair(best_selected_berth_id, dist);
     }
     best_selected_berth_id = 0;
+    dist = getDistByPoint(selected_berth[0], point);
     for (int i = 1; i < select_berth_num; i++)
     {
-        best_selected_berth_id = getDistByPoint(selected_berth[best_selected_berth_id], point) < getDistByPoint(selected_berth[i], point) ? best_selected_berth_id : i;
+        int cur_dist = getDistByPoint(selected_berth[i], point);
+        if (cur_dist < dist){
+            dist = cur_dist;
+            best_selected_berth_id = i;
+        }
     }
-    return best_selected_berth_id;
+    return make_pair(best_selected_berth_id, dist);
 }
 
 // A*定义节点
