@@ -168,9 +168,15 @@ void Output(int zhenId)
             }
             else
             {
-                // 根据计算出来的最短路径移动
-                robotMove(robotIdx, robot.path[robot.pid]);
-                robot.incrementPid();
+                if (robot.status != 0) {
+                    // 根据计算出来的最短路径移动
+                    robotMove(robotIdx, robot.path[robot.pid]);
+                    robot.incrementPid();
+                } else {
+                    vector<Direct> paths = {};
+                    robot.newPath(paths);
+                }
+                
             }
         }
         else
@@ -206,8 +212,14 @@ void Output(int zhenId)
             }
             else
             {
-                robotMove(robotIdx, robot.path[robot.pid]);
-                robot.incrementPid();
+                if (robot.status != 0) {
+                    // 根据计算出来的最短路径移动
+                    robotMove(robotIdx, robot.path[robot.pid]);
+                    robot.incrementPid();
+                } else {
+                    vector<Direct> paths = {};
+                    robot.newPath(paths);
+                }
             }
         }
     }

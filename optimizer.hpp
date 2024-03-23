@@ -325,8 +325,9 @@ void InitselectBerth()
             }
         }
     }
+    logger.log(INFO,formatString("single_channel_counts:{}",single_channel_counts));
     if (single_channel_counts >= high_single_channel_counts) {
-        res = {2,5,6,8,9}; // TODO:初赛图2特化
+        res = {0,3,6,7,9}; // TODO:初赛图2特化
         // 初始化全局变量 selected_berth 固定泊位数组
         for (int i = 0; i < boat_num; i++)
         {

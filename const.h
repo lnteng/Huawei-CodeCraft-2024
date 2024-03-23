@@ -27,7 +27,7 @@ const double goods_withinfield_ratio = 0; // 固定泊位区域外可选货物�
 const int rounding_num = 5; // 小数近似控制，rounding_num舍rounding_num+1入 // TODO:test
 const int berth_field_radius = 40; // 变更固定泊位时，比较货物区域半径 // TODO 改为该区域最远点距离的一个比例
 const int berth_field_over = 50; // 检测泊位曼哈顿距离小于等于60的点，用于判断是否属于固定泊位选择
-const int high_single_channel_counts = 5000;
+const int high_single_channel_counts = 6666;
 
 vector<vector<int>> berth_groups_vec; // 泊位组，注意泊位组初始化以后暂时不会变动
 int berthBelongGroup[berth_num]; // 泊位所属泊位组，用于变更泊位时使用
