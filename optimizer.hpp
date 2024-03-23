@@ -327,7 +327,7 @@ void InitselectBerth()
     }
     logger.log(INFO,formatString("single_channel_counts:{}",single_channel_counts));
     if (single_channel_counts >= high_single_channel_counts) {
-        res = {0,3,6,7,9}; // TODO:初赛图2特化
+        res = {0,2,6,7,9}; // TODO:初赛图2特化
         // 初始化全局变量 selected_berth 固定泊位数组
         for (int i = 0; i < boat_num; i++)
         {
@@ -367,7 +367,7 @@ void InitselectBerth()
             }
         }
     } else if (single_channel_counts < low_single_channel_counts) { // 图1特化
-        // res = {0,3,6,7,9}; // TODO:初赛图1特化
+        res = {1,2,6,8,9}; // TODO:初赛图1特化
         // 初始化全局变量 selected_berth 固定泊位数组
         for (int i = 0; i < boat_num; i++)
         {
@@ -732,53 +732,47 @@ void InitRobot()
                 allocated_robot_num = 1;
                 break;
             default:
+                allocated_robot_num = 1;
                 break;
             }   
         } else if (single_channel_counts < low_single_channel_counts) { //图1
             allocated_robot_num = 1;
-            // switch (selected_berth[rIdx])
-            // {
-            // case 0:
-            //     allocated_robot_num = 1;
-            //     break;
-            // case 3:
-            //     allocated_robot_num = 1;
-            //     break;
-            // case 6:
-            //     allocated_robot_num = 1;
-            //     break;
-            // case 7:
-            //     allocated_robot_num = 1;
-            //     break;
-            // case 9:
-            //     allocated_robot_num = 1;
-            //     break;
-            // default:
-            //     break;
-            // } 
+            switch (selected_berth[rIdx])
+            {
+            case 1:
+                allocated_robot_num = 1;
+                break;
+            case 2:
+                allocated_robot_num = 2;
+                break;
+            case 6:
+                allocated_robot_num = 1;
+                break;
+            case 8:
+                allocated_robot_num = 0;
+                break;
+            case 9:
+                allocated_robot_num = 1;
+                break;
+            default:
+                allocated_robot_num = 1;
+                break;
+            } 
         } else { // 图3
             allocated_robot_num = 1;
-            // switch (selected_berth[rIdx])
-            // {
-            // case 0:
+            if (rIdx) {
+                allocated_robot_num = 2;
+            } 
+            // } else if (selected_berth[rIdx] == 6) {
             //     allocated_robot_num = 1;
-            //     break;
-            // case 3:
+            // } else if (selected_berth[rIdx] == 7) {
             //     allocated_robot_num = 1;
-            //     break;
-            // case 6:
+            // } else if (selected_berth[rIdx] == 9) {
             //     allocated_robot_num = 1;
-            //     break;
-            // case 7:
+            // } else {
             //     allocated_robot_num = 1;
-            //     break;
-            // case 9:
-            //     allocated_robot_num = 1;
-            //     break;
-            // default:
-            //     allocated_robot_num = 1;
-            //     break;
             // }
+            
         }
 
         // 减去上一轮已分配的机器人数
