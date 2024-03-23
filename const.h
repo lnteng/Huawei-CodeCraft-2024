@@ -55,11 +55,12 @@ struct Robot // 机器人
     int robotId;
     int x, y, goods; // x,y:坐标 goods:货物数量
     int status;      // 机器人状态 0:恢复中 1:正常运行
-    // int mbx, mby; // 不绑定货物，考虑到取得货物以前可能出现新的更优货物
+    int mbx, mby; // 不绑定货物，考虑到取得货物以前可能出现新的更优货物
     vector<Direct> path; // 记录 A* 计算的路径
     int pid;             // 走到第几步
     int goodValue;       // 携带 good 的 value
     int selected_berthIdx;     // 机器人选择固定泊位
+    int rollback;
     Robot() {}
     Robot(int startX, int startY)
     {
@@ -91,15 +92,19 @@ struct Robot // 机器人
     }
     Direct nextDirect() // 目前没有使用，使用会出现更多问题
     {
-        if (pid < path.size()){
+        if (this->hasPath()) {
+            // logger.log("nextDirect " + to_string(this->pid));
             return this->path[this->pid];
         } else {
-            return pause;
+            return Direct::pause;
         }
     }
     void insertDirect(Direct dir) // 目前没有使用，使用会出现更多问题
     {
+        // logger.log("before insertDirect " + to_string(this->pid) + " " + to_string(this->path[this->pid]));
+        // logger.log("insertDirect" + to_string(dir));
         this->path.insert(this->path.begin() + this->pid, dir);
+        // logger.log("after insertDirect " + to_string(this->pid) + " " + to_string(this->path[this->pid]));
         ++extra_steps2avoid_collision;
     }
     void insertDirectAfter(Direct dir) // 目前没有使用，使用会出现更多问题 //TODO 注意现在下标
@@ -179,6 +184,9 @@ struct GoodsProperty // 货物属性
     }
 };
 
+unordered_map<Point, Point, hash_pair> entry2exit;
+unordered_map<Point, int, hash_pair> oneway_lock;
+
 unordered_map<Point, GoodsProperty, hash_pair> gds; // 货物(坐标->货物属性)
 int money, boat_capacity, id; // boat_capacity:所有船舶容量相同；id:帧ID
 char ch[N][N];                // 地图
@@ -250,6 +258,9 @@ inline void summary(int zhen,int zhenId) { // 总结最后结算信息
     logger.log(INFO, formatString("固定泊位辐射面积统计:{}", reachable_point_count)); 
     for (int i=0;i<boat_num;i++) {
         logger.log(INFO, formatString("  selectedBerth {} :berth_field_count: {}; berth", i, berth_field_count[i]));
+    }
+    for (auto& [entry, exit]: entry2exit) {
+        logger.log(formatString("oneway entry: ({}, {}), exit: ({}, {})", entry.first, entry.second, exit.first, exit.second));
     }
     logger.log(INFO, "summary end");
 }

@@ -197,185 +197,230 @@ inline Direct baseDirect(Direct dir1, int dir2)
     }
 }
 
-// 通过遍历所有机器人检测与robot1可能相撞的所有情况，为避免碰撞，返回一个新的机器人排序数组sortedRobots[10]
-vector<int> collisionAvoid(int zhenId)
-{
-    // vector<int> unsortedRobots;
-    // for (int i = 0; i < robot_num; i++)
-    // {
-    //     unsortedRobots.push_back(i);
+pair<int, int> detectCollision() {
+    // unordered_map<Point, int, hash_pair> cur_positions;
+    // unordered_map<Point, int, hash_pair> next_posisions;
+    // for (int i = 0; i < robot_num; i++) {
+    //     Robot& robot = robots[i];
+    //     Point cur_pos = make_pair(robot.x, robot.y);
+    //     cur_positions[cur_pos] = i;
+    //     Point next_pos = make_pair(robot.x + dx[robot.nextDirect()], robot.y + dy[robot.nextDirect()]);
+    //     if (next_posisions.count(next_pos) > 0) {
+    //         return make_pair(i, next_posisions[next_pos]);
+    //     }
+    //     next_posisions[next_pos] = i;
+        
+    //     if (cur_positions.count(next_pos) > 0) {
+    //         int j = cur_positions[next_pos];
+    //         if (next_posisions.count(cur_pos) > 0 && next_posisions[cur_pos] == j) {
+    //             return make_pair(i, j);
+    //         }
+    //     }
     // }
-    // if (checkCollisions(unsortedRobots).size() == 0)
-    // {
-    //     return unsortedRobots;
-    // } 
-    vector<pair<int, int>> priorityOrder;
-    for (int robotIdx1 = 0; robotIdx1 < robot_num; robotIdx1++)
-    {
-        Robot &robot1 = robots[robotIdx1];
-        for (int robotIdx2 = robotIdx1 + 1; robotIdx2 < robot_num; robotIdx2++)
-        {
-            Robot &robot2 = robots[robotIdx2];
-            if (!robot1.hasPath())
-            {
-                if (calcManhattanDist(robot1.x, robot1.y, robot2.x, robot2.y) < 2)
-                {
-                    if (robot2.nextDirect() == Direct::pause)
-                    {
-                        continue;
-                    }
-                    logger.log("robot2 insert pause");
-                    robot2.insertDirect(Direct::pause);
-                    continue;
-                }
-                continue;
+    vector<Point> cur_positions;
+    vector<Point> next_posisions;
+    for (int i = 0; i < robot_num; i++) {
+        Robot& robot = robots[i];
+        cur_positions.push_back(make_pair(robot.x, robot.y));
+        next_posisions.push_back(make_pair(robot.x + dx[robot.nextDirect()], robot.y + dy[robot.nextDirect()]));
+    }
+    for (int i = 0; i < robot_num; i++) {
+        for (int j = i + 1; j < robot_num; j++) {
+            if (next_posisions[i] == next_posisions[j]) {
+                return make_pair(i, j);
             }
-            if (!robot2.hasPath())
-            {
-                if (calcManhattanDist(robot1.x, robot1.y, robot2.x, robot2.y) < 2)
-                {
-                    if (robot1.nextDirect() == Direct::pause)
-                    {
-                        continue;
-                    }
-                    logger.log("robot1 insert pause");
-                    robot1.insertDirect(Direct::pause);
-                    continue;
-                }
-                continue;
+            if (cur_positions[i] == next_posisions[j] && next_posisions[i] == cur_positions[j]) {
+                return make_pair(i, j);
             }
-            if (robot1.x + dx[robot1.nextDirect()] == robot2.x + dx[robot2.nextDirect()] && robot1.y + dy[robot1.nextDirect()] == robot2.y + dy[robot2.nextDirect()])
-            { // case 1: 争抢同一个地方，只需要其中之一暂停一步，就会变成 case 2
-                logger.log("case 1");
-                if (priority_robot(robot1) > priority_robot(robot2))
-                {
-                    robot2.insertDirect(Direct::pause);
-                    for (int idx = robot2.pid - 1; idx <= robot2.pid + 1; idx++)
-                    {
-                        logger.log(to_string(robot2.path[idx]));
+        }
+    }
+    return boat_virtual_point;
+}
+
+void collisionAvoid() {
+    for (int i = 0; i < robot_num; i++) {
+        Robot& robot = robots[i];
+        if (congestion[robot.x][robot.y].first != 2) {
+            robot.rollback = 0;
+        }
+    }
+    auto collision = detectCollision();
+    int i = 0;
+    while (collision != boat_virtual_point) {
+        Robot& robot1 = robots[collision.first];
+        Robot& robot2 = robots[collision.second];
+        if (calcManhattanDist(robot1.x, robot1.y, robot2.x, robot2.y) == 1) {
+            if (congestion[robot1.x][robot1.y].first == 2 && congestion[robot2.x][robot2.y].first == 2) {
+                // if (robot1.rollback > robot2.rollback) {
+                if (robot1.robotId > robot2.robotId) {
+                    for (int dir = 0; dir < 4; dir++) {
+                        if (isRobotAccessible(robot1.x + dx[dir], robot1.y + dy[dir]) && (robot1.x + dx[dir] != robot2.x || robot1.y + dy[dir] != robot2.y)) {
+                            // logger.log("oneway");
+                            // logger.log(formatString("{} {}", robot1.x, robot1.y));
+                            // logger.log(formatString("{} {}", robot2.x, robot2.y));
+                            // logger.log(formatString("{} {}", robot1.nextDirect(), robot2.nextDirect()));
+                            robot1.insertDirect(Direct(dir ^ 1));
+                            robot1.insertDirect(Direct(dir));
+                            ++robot1.rollback;
+                            // logger.log(formatString("{} {}", robot1.nextDirect(), robot1.path[robot1.pid+1]));
+                        }
                     }
                 }
                 else
                 {
-                    robot1.insertDirect(Direct::pause);
-                    for (int idx = robot1.pid - 1; idx <= robot1.pid + 1; idx++)
-                    {
-                        logger.log(to_string(robot1.path[idx]));
+                    for (int dir = 0; dir < 4; dir++) {
+                        if (isRobotAccessible(robot2.x + dx[dir], robot2.y + dy[dir]) && (robot2.x + dx[dir] != robot1.x || robot2.y + dy[dir] != robot1.y)) {
+                            // logger.log("oneway");
+                            // logger.log(formatString("{} {}", robot2.x, robot2.y));
+                            // logger.log(formatString("{} {}", robot2.x, robot2.y));
+                            // logger.log(formatString("{} {}", robot1.nextDirect(), robot2.nextDirect()));
+                            robot2.insertDirect(Direct(dir ^ 1));
+                            robot2.insertDirect(Direct(dir));
+                            ++robot2.rollback;
+                            // logger.log(formatString("{} {}", robot2.nextDirect(), robot2.path[robot2.pid+1]));
+                        }
                     }
                 }
-            }
-            else if (robot1.x + dx[robot1.nextDirect()] == robot2.x && robot1.y + dy[robot1.nextDirect()] == robot2.y)
-            { // case 2: 相邻，默认 robot1 先移动，走到 robot2 当前位置的情况
-                logger.log("case 2");
-                if (robot1.x == robot2.x + dx[robot2.nextDirect()] && robot1.y == robot2.y + dy[robot2.nextDirect()])
-                { // robot2 也想往 robot1 的当前位置移动，也就是相向运动，只能选择一个绕路
-                    if (isRobotAccessible(robot1.x + dx[baseDirect(robot1.nextDirect(), 0)], robot1.y + dy[baseDirect(robot1.nextDirect(), 0)]) &&
-                        isRobotAccessible(robot2.x + dx[baseDirect(robot1.nextDirect(), 0)], robot2.y + dy[baseDirect(robot1.nextDirect(), 0)])) // TODO
-                    {                                                                                                                            // robot1 行走方向的左侧
-                        if (priority_robot(robot1) > priority_robot(robot2))
-                        { // robot2 绕路
-                            robot2.insertDirectAfter(baseDirect(robot1.nextDirect(), 1));
-                            robot2.insertDirect(baseDirect(robot1.nextDirect(), 0));
-                        }
-                        else
-                        { // robot1 绕路
-                            robot1.insertDirectAfter(baseDirect(robot1.nextDirect(), 1));
-                            robot1.insertDirect(baseDirect(robot1.nextDirect(), 0));
-                        }
-                    }
-                    else if (isRobotAccessible(robot1.x + dx[baseDirect(robot1.nextDirect(), 1)], robot1.y + dy[baseDirect(robot1.nextDirect(), 1)]) &&
-                             isRobotAccessible(robot2.x + dx[baseDirect(robot1.nextDirect(), 1)], robot2.y + dy[baseDirect(robot1.nextDirect(), 1)])) // TODO
-                    {                                                                                                                                 // robot1 行走方向的右侧
-                        if (priority_robot(robot1) > priority_robot(robot2))
-                        { // robot2 绕路
-                            robot2.insertDirectAfter(baseDirect(robot1.nextDirect(), 0));
-                            robot2.insertDirect(baseDirect(robot1.nextDirect(), 1));
-                        }
-                        else
-                        { // robot1 绕路
-                            robot1.insertDirectAfter(baseDirect(robot1.nextDirect(), 0));
-                            robot1.insertDirect(baseDirect(robot1.nextDirect(), 1));
-                        }
-                    }
-                    else if (isRobotAccessible(robot1.x + dx[baseDirect(robot1.nextDirect(), 0)], robot1.y + dy[baseDirect(robot1.nextDirect(), 0)]))
-                    { // 只能让 robot1 左绕路
-                        robot1.insertDirect(baseDirect(robot1.nextDirect(), 1));
-                        robot1.insertDirect(baseDirect(robot1.nextDirect(), 0));
-                    }
-                    else if (isRobotAccessible(robot1.x + dx[baseDirect(robot1.nextDirect(), 1)], robot1.y + dy[baseDirect(robot1.nextDirect(), 1)]))
-                    { // 只能让 robot1 右绕路
-                        robot1.insertDirect(baseDirect(robot1.nextDirect(), 0));
-                        robot1.insertDirect(baseDirect(robot1.nextDirect(), 1));
-                    }
-                    else if (isRobotAccessible(robot2.x + dx[baseDirect(robot2.nextDirect(), 0)], robot2.y + dy[baseDirect(robot2.nextDirect(), 0)]))
-                    { // 只能让 robot2 左绕路 TODO 修改
-                        robot2.insertDirect(baseDirect(robot1.nextDirect(), 1));
-                        robot2.insertDirect(baseDirect(robot1.nextDirect(), 0));
-                    }
-                    else if (isRobotAccessible(robot2.x + dx[baseDirect(robot2.nextDirect(), 1)], robot2.y + dy[baseDirect(robot2.nextDirect(), 1)]))
-                    { // 只能让 robot2 右绕路
-                        robot2.insertDirect(baseDirect(robot1.nextDirect(), 0));
-                        robot2.insertDirect(baseDirect(robot1.nextDirect(), 1));
-                    }
-                    else
-                    { // TODO: 无路可走的情况，应该只剩下单通道
+            } 
+            else if (congestion[robot1.x][robot1.y].first == 2) {
+                if (isRobotAccessible(robot2.x + dx[baseDirect(robot2.nextDirect(), 0)], robot2.y + dy[baseDirect(robot2.nextDirect(), 0)]) && robot2.nextDirect() != Direct::pause && (robot2.x + dx[baseDirect(robot2.nextDirect(), 1)] != robot2.mbx || robot2.y + dy[baseDirect(robot2.nextDirect(), 1)] != robot2.mby))
+                { // 只能让 robot2 左绕路
+                    Direct next = robot2.nextDirect();
+                    robot2.insertDirect(baseDirect(next, 1));
+                    robot2.insertDirect(baseDirect(next, 0));
+                    // logger.log("只能让 robot2 左绕路");
+                }
+                else if (isRobotAccessible(robot2.x + dx[baseDirect(robot2.nextDirect(), 1)], robot2.y + dy[baseDirect(robot2.nextDirect(), 1)]) && robot2.nextDirect() != Direct::pause && (robot2.x + dx[baseDirect(robot2.nextDirect(), 0)] != robot2.mbx || robot2.y + dy[baseDirect(robot2.nextDirect(), 0)] != robot2.mby))
+                { // 只能让 robot2 右绕路
+                    Direct next = robot2.nextDirect();
+                    robot2.insertDirect(baseDirect(next, 0));
+                    robot2.insertDirect(baseDirect(next, 1));
+                    // logger.log("只能让 robot2 右绕路");
+                } 
+                else {
+                    int dir = int(robot2.nextDirect()) ^ 1;
+                    if (isRobotAccessible(robot2.x + dx[dir], robot2.y + dy[dir])) {
+                        robot2.insertDirect(Direct(dir^1));
+                        robot2.insertDirect(Direct(dir));
                     }
                 }
-                else
-                { // robot2 不会向 robot1 当前位置移动，只需要让 robot2 先走，给 robot1 让路
-                    priorityOrder.push_back(make_pair(robotIdx2, robotIdx1));
+                // else if (isRobotAccessible(robot2.x + dx[baseDirect(robot2.nextDirect(), 0)], robot2.y + dy[baseDirect(robot2.nextDirect(), 0)]) && robot2.nextDirect() != Direct::pause)
+                // { // 只能让 robot2 左绕路
+                //     Direct next = robot2.nextDirect();
+                //     robot2.insertDirect(baseDirect(next, 1));
+                //     robot2.insertDirect(baseDirect(next, 0));
+                //     // logger.log("只能让 robot2 左绕路");
+                // }
+                // else if (isRobotAccessible(robot2.x + dx[baseDirect(robot2.nextDirect(), 1)], robot2.y + dy[baseDirect(robot2.nextDirect(), 1)]) && robot2.nextDirect() != Direct::pause)
+                // { // 只能让 robot2 右绕路
+                //     Direct next = robot2.nextDirect();
+                //     robot2.insertDirect(baseDirect(next, 0));
+                //     robot2.insertDirect(baseDirect(next, 1));
+                //     // logger.log("只能让 robot2 右绕路");
+                // }
+            } else if (congestion[robot2.x][robot2.y].first == 2) {
+                if (isRobotAccessible(robot1.x + dx[baseDirect(robot1.nextDirect(), 1)], robot1.y + dy[baseDirect(robot1.nextDirect(), 1)]) && robot1.nextDirect() != Direct::pause && (robot1.x + dx[baseDirect(robot1.nextDirect(), 1)] != robot1.mbx || robot1.y + dy[baseDirect(robot1.nextDirect(), 1)] != robot1.mby))
+                { // 只能让 robot1 右绕路
+                    Direct next = robot1.nextDirect();
+                    robot1.insertDirect(baseDirect(next, 0));
+                    robot1.insertDirect(baseDirect(next, 1));
+                    // logger.log("只能让 robot1 右绕路");
+                }
+                else if (isRobotAccessible(robot1.x + dx[baseDirect(robot1.nextDirect(), 0)], robot1.y + dy[baseDirect(robot1.nextDirect(), 0)]) && robot1.nextDirect() != Direct::pause && (robot1.x + dx[baseDirect(robot1.nextDirect(), 0)] != robot1.mbx || robot1.y + dy[baseDirect(robot1.nextDirect(), 0)] != robot1.mby))
+                { // 只能让 robot1 左绕路
+                    Direct next = robot1.nextDirect();
+                    robot1.insertDirect(baseDirect(next, 1));
+                    robot1.insertDirect(baseDirect(next, 0));
+                    // logger.log("只能让 robot1 左绕路");
+                }
+                else {
+                    int dir = int(robot1.nextDirect()) ^ 1;
+                    if (isRobotAccessible(robot1.x + dx[dir], robot1.y + dy[dir])) {
+                        robot1.insertDirect(Direct(dir^1));
+                        robot1.insertDirect(Direct(dir));
+                    }
+                }
+                // else if (isRobotAccessible(robot1.x + dx[baseDirect(robot1.nextDirect(), 1)], robot1.y + dy[baseDirect(robot1.nextDirect(), 1)]) && robot1.nextDirect() != Direct::pause)
+                // { // 只能让 robot1 右绕路
+                //     Direct next = robot1.nextDirect();
+                //     robot1.insertDirect(baseDirect(next, 0));
+                //     robot1.insertDirect(baseDirect(next, 1));
+                //     // logger.log("只能让 robot1 右绕路");
+                // }
+                // else if (isRobotAccessible(robot1.x + dx[baseDirect(robot1.nextDirect(), 0)], robot1.y + dy[baseDirect(robot1.nextDirect(), 0)]) && robot1.nextDirect() != Direct::pause)
+                // { // 只能让 robot1 左绕路
+                //     Direct next = robot1.nextDirect();
+                //     robot1.insertDirect(baseDirect(next, 1));
+                //     robot1.insertDirect(baseDirect(next, 0));
+                //     // logger.log("只能让 robot1 左绕路");
+                // }
+            }
+            else if (isRobotAccessible(robot1.x + dx[baseDirect(robot1.nextDirect(), 1)], robot1.y + dy[baseDirect(robot1.nextDirect(), 1)]) && robot1.nextDirect() != Direct::pause && (robot1.x + dx[baseDirect(robot1.nextDirect(), 1)] != robot1.mbx || robot1.y + dy[baseDirect(robot1.nextDirect(), 1)] != robot1.mby))
+            { // 只能让 robot1 右绕路
+                Direct next = robot1.nextDirect();
+                robot1.insertDirect(baseDirect(next, 0));
+                robot1.insertDirect(baseDirect(next, 1));
+                // logger.log("只能让 robot1 右绕路");
+            }
+            else if (isRobotAccessible(robot1.x + dx[baseDirect(robot1.nextDirect(), 0)], robot1.y + dy[baseDirect(robot1.nextDirect(), 0)]) && robot1.nextDirect() != Direct::pause && (robot1.x + dx[baseDirect(robot1.nextDirect(), 0)] != robot1.mbx || robot1.y + dy[baseDirect(robot1.nextDirect(), 0)] != robot1.mby))
+            { // 只能让 robot1 左绕路
+                Direct next = robot1.nextDirect();
+                robot1.insertDirect(baseDirect(next, 1));
+                robot1.insertDirect(baseDirect(next, 0));
+                // logger.log("只能让 robot1 左绕路");
+            }
+            else if (isRobotAccessible(robot2.x + dx[baseDirect(robot2.nextDirect(), 0)], robot2.y + dy[baseDirect(robot2.nextDirect(), 0)]) && robot2.nextDirect() != Direct::pause && (robot2.x + dx[baseDirect(robot2.nextDirect(), 1)] != robot2.mbx || robot2.y + dy[baseDirect(robot2.nextDirect(), 1)] != robot2.mby))
+            { // 只能让 robot2 左绕路
+                Direct next = robot2.nextDirect();
+                robot2.insertDirect(baseDirect(next, 1));
+                robot2.insertDirect(baseDirect(next, 0));
+                // logger.log("只能让 robot2 左绕路");
+            }
+            else if (isRobotAccessible(robot2.x + dx[baseDirect(robot2.nextDirect(), 1)], robot2.y + dy[baseDirect(robot2.nextDirect(), 1)]) && robot2.nextDirect() != Direct::pause && (robot2.x + dx[baseDirect(robot2.nextDirect(), 0)] != robot2.mbx || robot2.y + dy[baseDirect(robot2.nextDirect(), 0)] != robot2.mby))
+            { // 只能让 robot2 右绕路
+                Direct next = robot2.nextDirect();
+                robot2.insertDirect(baseDirect(next, 0));
+                robot2.insertDirect(baseDirect(next, 1));
+                // logger.log("只能让 robot2 右绕路");
+            }
+            else
+            {
+                if (isRobotAccessible(robot1.x + dx[baseDirect(robot1.nextDirect(), 1)], robot1.y + dy[baseDirect(robot1.nextDirect(), 1)]) && robot1.nextDirect() != Direct::pause)
+                { // 只能让 robot1 右绕路
+                    Direct next = robot1.nextDirect();
+                    robot1.insertDirect(baseDirect(next, 0));
+                    robot1.insertDirect(baseDirect(next, 1));
+                    // logger.log("只能让 robot1 右绕路");
+                }
+                else if (isRobotAccessible(robot1.x + dx[baseDirect(robot1.nextDirect(), 0)], robot1.y + dy[baseDirect(robot1.nextDirect(), 0)]) && robot1.nextDirect() != Direct::pause)
+                { // 只能让 robot1 左绕路
+                    Direct next = robot1.nextDirect();
+                    robot1.insertDirect(baseDirect(next, 1));
+                    robot1.insertDirect(baseDirect(next, 0));
+                    // logger.log("只能让 robot1 左绕路");
+                }
+                else if (isRobotAccessible(robot2.x + dx[baseDirect(robot2.nextDirect(), 0)], robot2.y + dy[baseDirect(robot2.nextDirect(), 0)]) && robot2.nextDirect() != Direct::pause)
+                { // 只能让 robot2 左绕路
+                    Direct next = robot2.nextDirect();
+                    robot2.insertDirect(baseDirect(next, 1));
+                    robot2.insertDirect(baseDirect(next, 0));
+                    // logger.log("只能让 robot2 左绕路");
+                }
+                else if (isRobotAccessible(robot2.x + dx[baseDirect(robot2.nextDirect(), 1)], robot2.y + dy[baseDirect(robot2.nextDirect(), 1)]) && robot2.nextDirect() != Direct::pause)
+                { // 只能让 robot2 右绕路
+                    Direct next = robot2.nextDirect();
+                    robot2.insertDirect(baseDirect(next, 0));
+                    robot2.insertDirect(baseDirect(next, 1));
+                    // logger.log("只能让 robot2 右绕路");
                 }
             }
-            else if (robot1.x == robot2.x + dx[robot2.nextDirect()] && robot1.y == robot2.y + dy[robot2.nextDirect()])
-            { // case 3: 相邻，robot1先移动不碰撞，robot2 先移动，走到 robot1 当前位置的情况
-                logger.log("case 3");
-                priorityOrder.push_back(make_pair(robotIdx1, robotIdx2));
+        } else if (calcManhattanDist(robot1.x, robot1.y, robot2.x, robot2.y) == 2) {
+            if (robot1.x + dx[robot1.nextDirect()] == robot2.x + dx[robot2.nextDirect()] && robot1.y + dy[robot1.nextDirect()] == robot2.y + dy[robot2.nextDirect()]) {
+                robot1.insertDirect(Direct::pause);
             }
+        } else {
+            
         }
+        collision = detectCollision();
     }
-    vector<int> sortedRobots;
-    if (!priorityOrder.empty())
-    {
-        sortedRobots = topologicalSort(priorityOrder, robot_num);
-    }
-    else
-    {
-        for (int i = 0; i < robot_num; i++)
-        {
-            sortedRobots.push_back(i);
-        }
-    }
-    if (sortedRobots.empty())
-    {
-        logger.log(WARNING,"collisionAvoid error: priorityOrder is empty"); 
-    }
-    vector<pair<int,int>> collisionRobots = checkCollisions(zhenId); //会发生碰撞的机器人 
-    // TODO 测试
-    if (collisionRobots.size() > 0) 
-    {   // TODO 使一部分发生碰撞的机器人暂停一步
-        logger.log(WARNING,"collisionAvoid handle");
-        // 遍历发生碰撞的顺序
-        vector<pair<int,int>> bestOrder=collisionRobots;
-        // 打印collisionRobots
-        for (int i = 0; i < collisionRobots.size(); i++)
-        {
-            logger.log(formatString("{}:collisionRobots include:({},{})",zhenId,collisionRobots[i].first,collisionRobots[i].second));
-        }
-    
-        // do
-        // {
-        //     tempOrder = checkCollisions(collisionRobots);
-        //     if (tempOrder.size()==0) {
-        //         bestOrder=collisionRobots;
-        //         break;
-        //     } else if (tempOrder.size()<bestOrder.size()) {
-        //         bestOrder=tempOrder;
-        //     }
-        // } while (std::next_permutation(collisionRobots.begin(), collisionRobots.end()));
-        // // 调整sortedRobots中bestOrder对应顺序
-        // if (bestOrder.size()!=0){
-        //     logger.log(ERROR,"collisionAvoid handle fail");
-        // }
-    }
-    return sortedRobots;
 }

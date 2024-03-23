@@ -309,6 +309,7 @@ void InitselectBerth()
                 }
                 congestion[i][j].first = 0;
                 // 四个方向是否是可达点
+                congestion[i][j].first = 0;
                 for (int k = 0; k < 4; k++)
                 {
                     if (!isRobotAccessible(i + dx[k], j + dy[k])) // 不可达点
@@ -339,15 +340,15 @@ void InitselectBerth()
     //     logger.log(INFO, oss.str());
     // }
     // 打印拥堵度地图信息
-    // for (int x = 0; x < n;x++){
-    //     std::ostringstream oss;
-    //     oss << "[";
-    //     for (int y = 0; y < n; y++){
-    //         oss << congestion[x][y].first << "\t";
-    //     }
-    //     oss << "]";
-    //     logger.log(INFO, oss.str());
-    // }
+    for (int x = 0; x < n;x++){
+        std::ostringstream oss;
+        oss << "[";
+        for (int y = 0; y < n; y++){
+            oss << congestion[x][y].first << "\t";
+        }
+        oss << "]";
+        logger.log(INFO, oss.str());
+    }
     for (int i = 0; i < boat_num; i++)
     {
         logger.log(INFO, formatString("berth_field_count[{}]:{}", i, berth_field_count[i]));

@@ -336,3 +336,101 @@ std::pair<int, int> berthSpaciousness(int berth_id) {
     std::pair<int, int> res = std::make_pair(reachable1, reachable2);
     return res;
 }
+
+void calcOneWaybyDfs() {
+    vector<vector<bool>> visited(N, vector<bool>(N, false)); // 跟 congestion 保持一致
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            if (congestion[i][j].first == 2 && !visited[i][j]) {
+                vector<Point> entrys;
+                stack<Point> stk;
+                stk.push(make_pair(i, j));
+                visited[i][j] = true;
+                while (!stk.empty()) {
+                    auto [row, col] = stk.top();
+                    stk.pop();
+                    for (int dir = 0 ; dir < 4; dir++) {
+                        int newRow = row + dx[dir];
+                        int newCol = col + dy[dir];
+                        if (congestion[newRow][newCol].first < 2) {
+                            entrys.push_back(make_pair(newRow, newCol));
+                        }
+                        // 检查相邻节点是否在图的范围内，并且未被访问过，并且是可以访问的节点
+                        if ((isRobotAccessible(newRow, newCol)) && !visited[newRow][newCol] && congestion[newRow][newCol].first == 2) {
+                            visited[newRow][newCol] = true;
+                            stk.push(make_pair(newRow, newCol));
+                        }
+                    }
+                }
+                if (entrys.size() == 1) {
+                    entry2exit[entrys[0]] = entrys[0];
+                }
+                if (entrys.size() == 2) {
+                    if (calcManhattanDist(entrys[0].first, entrys[0].second, entrys[1].first, entrys[1].second) > 2) {
+                        entry2exit[entrys[0]] = entrys[1];
+                        entry2exit[entrys[1]] = entrys[0];
+                    }
+                }
+                if (entrys.size() > 2) {
+                    for (int ss = 0; ss < entrys.size(); ss++) {
+                        logger.log(formatString("({}, {})", entrys[ss].first, entrys[ss].second));
+                    }
+                    logger.log(ERROR, "failed to calc oneway!");
+                    return;
+                }
+            }
+        }
+    }
+}
+
+
+// /**
+//  * @brief 基于迭代实现的深度优先遍历，用于寻找 oneway 的出口和入口
+//  */
+// void calcOneWaybyDfs(Point start, vector<vector<bool>>& visited)
+// { // 
+//     stack<Point> stk;
+//     stk.push(start);
+//     stack<Point> entry_stk;
+    
+//     vector<vector<bool>> visited(N, vector<bool>(N, false)); // 跟 congestion 保持一致
+//     bool flag = true;
+//     while (!stk.empty()) {
+//         auto [row, col] = stk.top();
+//         stk.pop();
+
+//         if (visited[row][col]) {
+//             continue;
+//         }
+//         visited[row][col] = true;
+
+//         for (int i = 0 ; i < 4; i++) {
+//             int newRow = row + dx[i];
+//             int newCol = col + dy[i];
+//             // 检查相邻节点是否在图的范围内，并且未被访问过，并且是可以访问的节点
+//             if ((isRobotAccessible(newRow, newCol)) && !visited[newRow][newCol]) {
+//                 if (congestion[newRow][newCol].first == 2 && congestion[row][col].first < 2) 
+//                 { // 当前位置不拥堵；下一步拥堵度，那么当前位置就是 oneway 的入口
+//                     logger.log(formatString("oneway entry: ({}, {})", row, col));
+//                     Point entry = make_pair(row, col);
+//                     entry_stk.push(entry);
+//                 }
+//                 if (congestion[newRow][newCol].first < 2 && congestion[row][col].first == 2) 
+//                 { // 当前位置拥堵；下一步不拥堵，那么下一步就是 oneway 的出口
+//                     Point exit = make_pair(newRow, newCol);
+//                     if (!entry_stk.empty()) {
+//                         Point entry = entry_stk.top();
+//                         entry_stk.pop();
+//                         if (calcManhattanDist(entry.first, entry.second, exit.first, exit.second) > 2) {
+//                             logger.log(formatString("oneway exit: ({}, {})", newRow, newCol));
+//                             entry2exit[entry] = exit;
+//                             entry2exit[exit] = entry;
+//                             entry = make_pair(200, 200);
+//                         }
+//                     }
+//                 }
+//                 stk.push({newRow, newCol});
+//             }
+//         }
+//     }
+// }

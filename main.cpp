@@ -29,6 +29,7 @@ void Init()
     getDistByBfs();    // 使用基于stack实现的广度优先搜索 (BFS) 算法计算每个泊位到网格上每个点的距离
     InitselectBerth(); // 设置泊位初始位置，确定固定泊位和初始化地图点位所属泊位区域，并初始化每个点的拥堵度
     InitRobot();       // 初始化机器人路径，实现固定泊位区域分配
+    calcOneWaybyDfs(); // 基于 DFS 寻找 oneway 的出口和入口
     Ok();
     logger.log(INFO, "Init OK");
     fflush(stdout);
@@ -48,6 +49,8 @@ inline void robotMove(int idx, Direct dir)
         robots[idx].newPath(paths);
         return; // 路径走完了，Pid++也不会影响
     }
+    robots[idx].mbx = robots[idx].x;
+    robots[idx].mby = robots[idx].y;
     robots[idx].x += dx[dir];
     robots[idx].y += dy[dir];
     switch (dir)
@@ -118,7 +121,8 @@ void Output(int zhenId)
     // logger.log(INFO, formatString("zhenId: {}", zhenId));
     // TODO ：差错检测
     // TODO : 机器人碰撞处理
-    vector<int> sortedRobots = collisionAvoid(zhenId);
+    collisionAvoid();
+    // for (auto robotIdx: sortedRobots)
     for (int robotIdx = 0; robotIdx < robot_num; robotIdx++)
     {
         logger.log(formatString("robotIdx: {} ({},{}) dir:{}", robotIdx,robots[robotIdx].x,robots[robotIdx].y,robots[robotIdx].path[robots[robotIdx].pid]));
@@ -303,21 +307,21 @@ void Output(int zhenId)
                     boatGo(i);
                     // TODO 单独的策略(如果有可达的港口)，应该从其他泊位组选择
                     endBoatGroup[berthBelongGroup[boats[i].pos]] = 0;
-                    bool flag = endSelectedBerth(berthBelongGroup[boats[i].pos], zhenId);
-                    if (flag) //如果存在可达的剩余港口
-                    {
-                         for (int j = 0; j < robot_num; j++)
-                        {
-                            if (berth_field[robots[j].x][robots[j].y] == berthBelongGroup[boats[i].pos])
-                            {
-                                if (robots[j].goods) { // 有货物的重新计算路径去新港口
-                                    vector<Direct> paths = {};
-                                    robots[j].newPath(paths);
-                                }
-                                // 机器人绑定固定船舶ID不用更新
-                            }
-                        }
-                    }// 否则已经没有可达的港口了
+                    // bool flag = endSelectedBerth(berthBelongGroup[boats[i].pos], zhenId);
+                    // if (flag) //如果存在可达的剩余港口
+                    // {
+                    //      for (int j = 0; j < robot_num; j++)
+                    //     {
+                    //         if (berth_field[robots[j].x][robots[j].y] == berthBelongGroup[boats[i].pos])
+                    //         {
+                    //             if (robots[j].goods) { // 有货物的重新计算路径去新港口
+                    //                 vector<Direct> paths = {};
+                    //                 robots[j].newPath(paths);
+                    //             }
+                    //             // 机器人绑定固定船舶ID不用更新
+                    //         }
+                    //     }
+                    // }// 否则已经没有可达的港口了
                 }
             }
         }
