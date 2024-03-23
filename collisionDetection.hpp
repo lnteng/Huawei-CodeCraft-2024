@@ -246,6 +246,7 @@ void collisionAvoid() {
     }
     auto collision = detectCollision();
     int i = 0;
+    pair<int,int> temp;
     while (collision != boat_virtual_point) {
         Robot& robot1 = robots[collision.first];
         Robot& robot2 = robots[collision.second];
@@ -420,6 +421,9 @@ void collisionAvoid() {
             }
         } else {
             
+        }
+        if (temp == collision) {
+            break;
         }
         collision = detectCollision();
     }
