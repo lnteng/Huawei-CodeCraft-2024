@@ -247,7 +247,9 @@ void collisionAvoid() {
     auto collision = detectCollision();
     int i = 0;
     pair<int,int> temp;
+    int while_limit = 100;
     while (collision != boat_virtual_point) {
+        while_limit--;
         Robot& robot1 = robots[collision.first];
         Robot& robot2 = robots[collision.second];
         if (calcManhattanDist(robot1.x, robot1.y, robot2.x, robot2.y) == 1) {
@@ -422,7 +424,7 @@ void collisionAvoid() {
         } else {
             
         }
-        if (temp == collision) {
+        if (temp == collision || while_limit <= 0) {
             break;
         }
         collision = detectCollision();

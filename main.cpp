@@ -318,7 +318,7 @@ void Output(int zhenId)
                     logger.log(INFO, formatString("{}:deadline boat {} boatGo,berth {} remain: {}", zhenId,i,boats[i].pos,berth.remain_goods_num));
                     boatGo(i);
                     // TODO 单独的策略(如果有可达的港口)，应该从其他泊位组选择
-                    endBoatGroup[berthBelongGroup[boats[i].pos]] = 0;
+                    // endBoatGroup[berthBelongGroup[boats[i].pos]] = 0;
                     // bool flag = endSelectedBerth(berthBelongGroup[boats[i].pos], zhenId);
                     // if (flag) //如果存在可达的剩余港口
                     // {
