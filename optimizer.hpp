@@ -315,12 +315,17 @@ void InitselectBerth()
                     {
                         congestion[i][j].first++;
                     }
+                    if (congestion[i][j].first == 2 || congestion[i][j].first == 3)
+                    {
+                        single_channel_counts++;
+                    }
                 }
             } else { //不可达点
                 congestion[i][j] = make_pair(4,0);
             }
         }
     }
+    logger.log(INFO,formatString("single_channel_counts:{}", single_channel_counts));
     // 打印初始化船舶区域信息
     // for (int x = 0; x < n; x++)
     // {
@@ -580,19 +585,22 @@ void InitRobot()
         // int allocated_robot_num = std::floor(static_cast<double>(berth_field_count[top.first]) / part + 0.5); // 每个泊位分配的机器人数目,四舍五入
         int allocated_robot_num;
         double fraction_part = static_cast<double>(berth_field_count[top.first]) / part - std::floor(static_cast<double>(berth_field_count[top.first]) / part); // 小数部分
-        if (fraction_part >= static_cast<double>(rounding_num+1) / 10) {
+        if (fraction_part >= static_cast<double>(rounding_num+1) / (berth_num-boat_num)) {
             allocated_robot_num = std::ceil(static_cast<double>(berth_field_count[top.first]) / part); // num+1入
         } else {
             allocated_robot_num = std::floor(static_cast<double>(berth_field_count[top.first]) / part); // num舍
         }
-        // 减去上一轮已分配的机器人数
-        for (int rIdx = 0; rIdx < robot_num; rIdx++)
-        {
-            if (robots[rIdx].selected_berthIdx == top.first)
-            {
-                allocated_robot_num--;
-            }
+        if (single_channel_counts > high_single_channel_counts) {
+            allocated_robot_num = 1; // num+1入
         }
+        // 减去上一轮已分配的机器人数
+        // for (int rIdx = 0; rIdx < robot_num; rIdx++)
+        // {
+        //     if (robots[rIdx].selected_berthIdx == top.first)
+        //     {
+        //         allocated_robot_num--;
+        //     }
+        // }
         logger.log(INFO, formatString("allocated_robot_num[{}]:{}", top.first, allocated_robot_num));
         for (int j = 0; j < allocated_robot_num; j++)
         { // 每个泊位依次选择最近的机器人

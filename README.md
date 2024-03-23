@@ -6,6 +6,8 @@
 mkdir build
 mkdir replay
 mkdir results
+cd build
+cmake ../
 cmake --build ./build/ --target main
 chmod +x PreliminaryJudge
 ./PreliminaryJudge ./build/main -m ./maps/map-3.8.txt
