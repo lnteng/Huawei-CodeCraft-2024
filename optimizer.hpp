@@ -282,7 +282,6 @@ void InitselectBerth()
     // 初始化固定泊位辐射区域数目
     for (int i =0; i< berth_num; i++){
         berth_field_count[i] = 0;
-
     }
     // 初始化地图拥堵度
     for (int i = 0; i < n; i++)
@@ -322,6 +321,47 @@ void InitselectBerth()
                 }
             } else { //不可达点
                 congestion[i][j] = make_pair(4,0);
+            }
+        }
+    }
+    if (single_channel_counts >= high_single_channel_counts) {
+        res = {2,5,6,8,9}; // TODO:初赛图2特化
+        // 初始化全局变量 selected_berth 固定泊位数组
+        for (int i = 0; i < boat_num; i++)
+        {
+            selected_berth[i] = res[i];
+        }
+        // 更新地图点位所属泊位区域和拥堵度地图信息
+        for (int i = 0; i < n; i++)
+        {
+            for (int j = 0; j < n; j++)
+            {
+                pair<int,int> bIdx_and_dist = locateBelongBerth(make_pair(i, j));
+                int bIdx = bIdx_and_dist.first;
+                berth_field[i][j] = bIdx;
+                if (bIdx != -1)
+                { // 可达点
+                    if (bIdx_and_dist.second < berth_field_over)
+                    {
+                        berth_field_count[bIdx]++; // 统计固定泊位辐射可达点数目
+                        reachable_point_count++;
+                    }
+                    congestion[i][j].first = 0;
+                    // 四个方向是否是可达点
+                    for (int k = 0; k < 4; k++)
+                    {
+                        if (!isRobotAccessible(i + dx[k], j + dy[k])) // 不可达点
+                        {
+                            congestion[i][j].first++;
+                        }
+                        if (congestion[i][j].first == 2 || congestion[i][j].first == 3)
+                        {
+                            single_channel_counts++;
+                        }
+                    }
+                } else { //不可达点
+                    congestion[i][j] = make_pair(4,0);
+                }
             }
         }
     }
@@ -592,6 +632,30 @@ void InitRobot()
         }
         if (single_channel_counts > high_single_channel_counts) {
             allocated_robot_num = 1; // num+1入
+        }
+        if (single_channel_counts > high_single_channel_counts) {
+            int bIdx = top.first;
+            switch (selected_berth[bIdx])
+            {
+            case 2:
+                allocated_robot_num =1;
+                break;
+            case 5:
+                allocated_robot_num =0;
+                break;
+            case 6:
+                allocated_robot_num =2;
+                break;
+            case 8:
+                allocated_robot_num =1;
+                break;
+            case 9:
+                allocated_robot_num =1;
+                break;
+            default:
+                allocated_robot_num =1;
+                break;
+            }
         }
         // 减去上一轮已分配的机器人数
         // for (int rIdx = 0; rIdx < robot_num; rIdx++)
