@@ -158,19 +158,33 @@ struct Node
     int g, h; // 实际代价和启发式代价
     Node(int _x, int _y, int _g, int _h) : x(_x), y(_y), g(_g), h(_h) {}
 };
-
+bool isRobotExist(int x, int y) {
+    for (int rIdx=0 ; rIdx < robot_num; rIdx++) {
+        if (robots[rIdx].x == x && robots[rIdx].y == y) {
+            return true;
+        }
+    }
+    return false;
+}
 
 /**
  * @brief A* 算法:执行 A* 算法来查找网格上两点之间的最短路径。
  *
- * @param p1 起点。
- * @param p2 目标点。
+ * @param p1 起点，机器人。
+ * @param p2 目标点，货物。
  * @param version 算法版本：版本0为普通A*算法，版本1为A*算法加入了拥堵度的启发式函数。
  * @return 表示存放从 p1 到 p2 最短路径的方向向量的路径。
  * 如果没有路径，则返回空向量。
  */
 vector<Direct> AStar(Point p1, Point p2,int version=0)
 {
+    int rIdx; //p1点机器人ID
+    for (rIdx= 0;rIdx < robot_num; rIdx++) {
+        if (robots[rIdx].x == p1.first && robots[rIdx].y == p1.second) {
+            break;
+        }
+    }
+
     if (!isRobotAccessible(p1.first, p1.second) || !isRobotAccessible(p2.first, p2.second))
     {
         logger.log(WARNING, formatString("AStar: p1({},{}) or p2({},{}) is not accessible", p1.first, p1.second, p2.first, p2.second)); // 该区域没有可获取货物
@@ -247,7 +261,10 @@ vector<Direct> AStar(Point p1, Point p2,int version=0)
             int ny = cur.y + dy[i];
 
             // 判断新位置是否有效
-            if (nx >= 0 && nx < n && ny >= 0 && ny < n && !visited[nx][ny] && isRobotAccessible(nx, ny))
+            if ((nx >= 0 && nx < n && ny >= 0 && ny < n && !visited[nx][ny] && isRobotAccessible(nx, ny)&& robots[rIdx].status !=0)
+                || (nx >= 0 && nx < n && ny >= 0 && ny < n && !visited[nx][ny] && isRobotAccessible(nx, ny)
+                    && robots[rIdx].status ==0 && !isRobotExist(nx, ny))
+            )
             {
                 visited[nx][ny] = true;
                 parent[nx][ny] = {cur.x, cur.y};

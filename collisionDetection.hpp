@@ -247,7 +247,7 @@ void collisionAvoid() {
     auto collision = detectCollision();
     int i = 0;
     pair<int,int> temp;
-    int while_limit = 100;
+    int while_limit = 25;
     while (collision != boat_virtual_point) {
         while_limit--;
         Robot& robot1 = robots[collision.first];
